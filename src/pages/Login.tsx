@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { loginAnonymously, loginWithGoogle } from '@/services/auth';
@@ -8,8 +8,13 @@ import { Sparkles, ShieldCheck, Zap, LineChart, Target, ArrowRight } from 'lucid
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const { setUser, addToast } = useAppStore();
+  const { user, setUser, addToast } = useAppStore();
   const [loadingType, setLoadingType] = useState<'anonymous' | 'google' | null>(null);
+
+  // 若使用者已登入，自動進入主畫面
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleAnonymousLogin = async () => {
     setLoadingType('anonymous');

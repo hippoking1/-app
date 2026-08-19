@@ -89,10 +89,17 @@ export function subscribeAccounts(userId: string, callback: (accounts: Account[]
   }
 
   const q = query(collection(db, 'users', userId, 'accounts'), orderBy('sortOrder', 'asc'));
-  return onSnapshot(q, (snapshot) => {
-    const accs = snapshot.docs.map(d => d.data() as Account);
-    callback(accs);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const accs = snapshot.docs.map(d => d.data() as Account);
+      callback(accs);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeAccounts 存取受限或未初始化:', error);
+      callback([]);
+    }
+  );
 }
 
 export async function saveAccount(account: Account): Promise<void> {
@@ -135,10 +142,17 @@ export function subscribeCategories(userId: string, callback: (categories: Categ
   }
 
   const q = query(collection(db, 'users', userId, 'categories'), orderBy('sortOrder', 'asc'));
-  return onSnapshot(q, (snapshot) => {
-    const cats = snapshot.docs.map(d => d.data() as Category);
-    callback(cats);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const cats = snapshot.docs.map(d => d.data() as Category);
+      callback(cats);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeCategories error:', error);
+      callback([]);
+    }
+  );
 }
 
 export async function saveCategory(category: Category): Promise<void> {
@@ -180,10 +194,17 @@ export function subscribeTransactions(userId: string, callback: (transactions: T
   }
 
   const q = query(collection(db, 'users', userId, 'transactions'), orderBy('date', 'desc'));
-  return onSnapshot(q, (snapshot) => {
-    const txs = snapshot.docs.map(d => d.data() as Transaction);
-    callback(txs);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const txs = snapshot.docs.map(d => d.data() as Transaction);
+      callback(txs);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeTransactions error:', error);
+      callback([]);
+    }
+  );
 }
 
 /**
@@ -264,7 +285,7 @@ export async function deleteTransaction(transaction: Transaction): Promise<void>
     }
     if (type === 'transfer' && transferToAccountId) {
       const targetAcc = accList.find(a => a.id === transferToAccountId);
-      if (targetAcc) targetAcc.balance -= amount;
+      if (targetAcc) targetAcc.balance += amount;
     }
     LocalStore.set('accounts_' + userId, accList);
     return;
@@ -314,10 +335,17 @@ export function subscribeBudgets(userId: string, callback: (budgets: Budget[]) =
   }
 
   const q = collection(db, 'users', userId, 'budgets');
-  return onSnapshot(q, (snapshot) => {
-    const budgets = snapshot.docs.map(d => d.data() as Budget);
-    callback(budgets);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const budgets = snapshot.docs.map(d => d.data() as Budget);
+      callback(budgets);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeBudgets error:', error);
+      callback([]);
+    }
+  );
 }
 
 export async function saveBudget(budget: Budget): Promise<void> {
@@ -359,10 +387,17 @@ export function subscribeStockHoldings(userId: string, callback: (holdings: Stoc
   }
 
   const q = collection(db, 'users', userId, 'stockHoldings');
-  return onSnapshot(q, (snapshot) => {
-    const holdings = snapshot.docs.map(d => d.data() as StockHolding);
-    callback(holdings);
-  });
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const holdings = snapshot.docs.map(d => d.data() as StockHolding);
+      callback(holdings);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeStockHoldings error:', error);
+      callback([]);
+    }
+  );
 }
 
 export async function saveStockHolding(holding: StockHolding): Promise<void> {
