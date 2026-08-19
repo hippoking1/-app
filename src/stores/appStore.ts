@@ -48,7 +48,13 @@ interface AppState {
 export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   isLoadingAuth: true,
-  setUser: (user) => set({ user }),
+  setUser: (newUser) =>
+    set((state) => {
+      if (state.user?.uid === newUser?.uid && state.user?.email === newUser?.email) {
+        return state; // 相同使用者不更新 state 引用，防止元件樹重新執行 useEffect
+      }
+      return { user: newUser };
+    }),
   setIsLoadingAuth: (isLoadingAuth) => set({ isLoadingAuth }),
 
   theme: (localStorage.getItem('smart_theme') as 'dark' | 'light') || 'dark',

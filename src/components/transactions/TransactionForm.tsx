@@ -25,15 +25,38 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const { accounts } = useAccounts();
   const { categories } = useCategories();
 
-  const [type, setType] = useState<TransactionType>(initialData?.type || 'expense');
-  const [amount, setAmount] = useState<string>(initialData?.amount ? String(initialData.amount) : '');
+  const [type, setType] = useState<TransactionType>(() => {
+    return initialData?.type || (sessionStorage.getItem('draft_tx_type') as TransactionType) || 'expense';
+  });
+  const [amount, setAmount] = useState<string>(() => {
+    return initialData?.amount ? String(initialData.amount) : sessionStorage.getItem('draft_tx_amount') || '';
+  });
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || accounts[0]?.id || '');
   const [transferToAccountId, setTransferToAccountId] = useState<string>(initialData?.transferToAccountId || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
   const [date, setDate] = useState<string>(initialData?.date || format(new Date(), 'yyyy-MM-dd'));
-  const [note, setNote] = useState<string>(initialData?.note || '');
+  const [note, setNote] = useState<string>(() => {
+    return initialData?.note || sessionStorage.getItem('draft_tx_note') || '';
+  });
   const [tagInput, setTagInput] = useState<string>(initialData?.tags ? initialData.tags.join(', ') : '');
   const [loading, setLoading] = useState(false);
+
+  // 自動同步草稿至 sessionStorage
+  const handleAmountChange = (val: string) => {
+    setAmount(val);
+    sessionStorage.setItem('draft_tx_amount', val);
+  };
+
+  const handleNoteChange = (val: string) => {
+    setNote(val);
+    sessionStorage.setItem('draft_tx_note', val);
+  };
+
+  const clearDraft = () => {
+    sessionStorage.removeItem('draft_tx_amount');
+    sessionStorage.removeItem('draft_tx_note');
+    sessionStorage.removeItem('draft_tx_type');
+  };
 
   // 根據收支類型過濾分類
   const filteredCategories = categories.filter((c) => c.type === (type === 'income' ? 'income' : 'expense'));
@@ -97,6 +120,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       }
 
       await addTransaction(transaction);
+      clearDraft();
       addToast({ type: 'success', message: '記帳已儲存！' });
       if (onSuccess) onSuccess();
     } catch (err: any) {
@@ -165,7 +189,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             type="number"
             step="any"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={(e) => handleAmountChange(e.target.value)}
             placeholder="0"
             required
             autoFocus
@@ -242,7 +266,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           label="備註說明"
           placeholder="例如：午餐拉麵、搭計程車"
           value={note}
-          onChange={(e) => setNote(e.target.value)}
+          onChange={(e) => handleNoteChange(e.target.value)}
         />
       </div>
 

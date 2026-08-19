@@ -29,22 +29,38 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
   const isExistingHolding = Boolean((stock as StockHolding)?.shares);
   const [mode, setMode] = useState<FormMode>(isExistingHolding ? 'buy' : initialMode);
   
-  const [symbol, setSymbol] = useState(stock?.symbol || '2330.TW');
-  const [name, setName] = useState(stock?.name || '台積電');
+  const [symbol, setSymbol] = useState(() => {
+    return stock?.symbol || sessionStorage.getItem('draft_stock_symbol') || '2330.TW';
+  });
+  const [name, setName] = useState(() => {
+    return stock?.name || sessionStorage.getItem('draft_stock_name') || '台積電';
+  });
   const [market, setMarket] = useState<StockMarket>(stock?.market || 'TW');
-  const [shares, setShares] = useState<string>(isExistingHolding ? '1000' : '1000');
+  const [shares, setShares] = useState<string>(() => {
+    return isExistingHolding ? '1000' : sessionStorage.getItem('draft_stock_shares') || '1000';
+  });
   
   // 成本單價與現價
-  const [costPrice, setCostPrice] = useState<string>(
-    stock ? String((stock as any).avgCost || (stock as any).price || (stock as any).currentPrice || '') : ''
-  );
+  const [costPrice, setCostPrice] = useState<string>(() => {
+    return stock
+      ? String((stock as any).avgCost || (stock as any).price || (stock as any).currentPrice || '')
+      : sessionStorage.getItem('draft_stock_cost') || '';
+  });
   const [currentPrice, setCurrentPrice] = useState<string>(
     stock ? String((stock as any).currentPrice || (stock as any).price || (stock as any).avgCost || '') : ''
   );
   
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [note, setNote] = useState('');
+  const [note, setNote] = useState(() => sessionStorage.getItem('draft_stock_note') || '');
   const [loading, setLoading] = useState(false);
+
+  const clearStockDraft = () => {
+    sessionStorage.removeItem('draft_stock_symbol');
+    sessionStorage.removeItem('draft_stock_name');
+    sessionStorage.removeItem('draft_stock_shares');
+    sessionStorage.removeItem('draft_stock_cost');
+    sessionStorage.removeItem('draft_stock_note');
+  };
 
   // 試算金額
   const numShares = parseFloat(shares) || 0;
@@ -105,6 +121,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
       };
 
       await saveStockHolding(holding);
+      clearStockDraft();
       addToast({
         type: 'success',
         message: mode === 'init'

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '@/stores/appStore';
 import {
   subscribeAccounts,
@@ -20,22 +20,22 @@ import {
  * 監聽並取得當前使用者所有帳戶
  */
 export function useAccounts() {
-  const user = useAppStore((state) => state.user);
+  const userId = useAppStore((state) => state.user?.uid);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setAccounts([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    // 初始化使用者預設資料
-    initializeUserData(user.uid).catch(console.error);
+    // 初始化使用者預設資料 (僅在未初始化時執行)
+    initializeUserData(userId).catch(console.error);
 
-    const unsubscribe = subscribeAccounts(user.uid, (data) => {
+    const unsubscribe = subscribeAccounts(userId, (data) => {
       // 強制依名稱唯一去重
       const uniqueAccs = Array.from(new Map(data.map((a) => [a.name, a])).values());
       setAccounts(uniqueAccs);
@@ -43,7 +43,7 @@ export function useAccounts() {
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [userId]); // 使用穩定字串 userId，杜絕 User 物件引用變更導致的重新載入
 
   return { accounts, loading };
 }
@@ -52,19 +52,19 @@ export function useAccounts() {
  * 監聽並取得分類列表
  */
 export function useCategories(type?: 'expense' | 'income') {
-  const user = useAppStore((state) => state.user);
+  const userId = useAppStore((state) => state.user?.uid);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setCategories([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeCategories(user.uid, (data) => {
+    const unsubscribe = subscribeCategories(userId, (data) => {
       // 強制依 (type + name) 唯一去重
       const uniqueCats = Array.from(new Map(data.map((c) => [`${c.type}_${c.name}`, c])).values());
       if (type) {
@@ -76,7 +76,7 @@ export function useCategories(type?: 'expense' | 'income') {
     });
 
     return () => unsubscribe();
-  }, [user, type]);
+  }, [userId, type]); // 使用穩定字串 userId
 
   return { categories, loading };
 }
@@ -85,29 +85,32 @@ export function useCategories(type?: 'expense' | 'income') {
  * 監聽並取得交易清單 (支援月份或帳戶過濾)
  */
 export function useTransactions(options?: { accountId?: string; month?: string }) {
-  const user = useAppStore((state) => state.user);
+  const userId = useAppStore((state) => state.user?.uid);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const accountId = options?.accountId;
+  const month = options?.month;
+
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setTransactions([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeTransactions(user.uid, (data) => {
+    const unsubscribe = subscribeTransactions(userId, (data) => {
       let filtered = data;
 
-      if (options?.accountId && options.accountId !== 'all') {
+      if (accountId && accountId !== 'all') {
         filtered = filtered.filter(
-          (t) => t.accountId === options.accountId || t.transferToAccountId === options.accountId
+          (t) => t.accountId === accountId || t.transferToAccountId === accountId
         );
       }
 
-      if (options?.month) {
-        filtered = filtered.filter((t) => t.date.startsWith(options.month!));
+      if (month) {
+        filtered = filtered.filter((t) => t.date && t.date.replace(/\//g, '-').startsWith(month));
       }
 
       setTransactions(filtered);
@@ -115,7 +118,7 @@ export function useTransactions(options?: { accountId?: string; month?: string }
     });
 
     return () => unsubscribe();
-  }, [user, options?.accountId, options?.month]);
+  }, [userId, accountId, month]); // 使用穩定原始型別依賴
 
   return { transactions, loading };
 }
@@ -124,25 +127,25 @@ export function useTransactions(options?: { accountId?: string; month?: string }
  * 監聽並取得預算設定
  */
 export function useBudgets() {
-  const user = useAppStore((state) => state.user);
+  const userId = useAppStore((state) => state.user?.uid);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setBudgets([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeBudgets(user.uid, (data) => {
+    const unsubscribe = subscribeBudgets(userId, (data) => {
       setBudgets(data);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [userId]);
 
   return { budgets, loading };
 }
@@ -151,25 +154,25 @@ export function useBudgets() {
  * 監聽並取得股票持倉
  */
 export function useStockHoldings() {
-  const user = useAppStore((state) => state.user);
+  const userId = useAppStore((state) => state.user?.uid);
   const [holdings, setHoldings] = useState<StockHolding[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setHoldings([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    const unsubscribe = subscribeStockHoldings(user.uid, (data) => {
+    const unsubscribe = subscribeStockHoldings(userId, (data) => {
       setHoldings(data);
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [user]);
+  }, [userId]);
 
   return { holdings, loading };
 }
