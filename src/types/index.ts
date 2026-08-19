@@ -28,6 +28,7 @@ export interface Account {
   icon: string;
   color: string;
   balance: number;
+  creditLimit?: number; // 信用卡總信用額度 (NT$)
   currency: string;
   isArchived: boolean;
   sortOrder: number;

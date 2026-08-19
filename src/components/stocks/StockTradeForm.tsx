@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StockHolding, StockSearchResult, StockTradeType } from '@/types';
+import { StockHolding, StockSearchResult, StockMarket } from '@/types';
 import { useAppStore } from '@/stores/appStore';
 import { saveStockHolding } from '@/services/firestore';
 import { Button } from '@/components/ui/Button';
@@ -9,45 +9,62 @@ import { calculateTWStockFee, calculateTWStockTax } from '@/utils/stockCalculati
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 
+type FormMode = 'init' | 'buy' | 'sell';
+
 interface StockTradeFormProps {
   stock?: StockSearchResult | StockHolding;
+  initialMode?: FormMode;
   onSuccess?: () => void;
   onCancel?: () => void;
 }
 
 export const StockTradeForm: React.FC<StockTradeFormProps> = ({
   stock,
+  initialMode = 'init',
   onSuccess,
   onCancel
 }) => {
   const { user, addToast } = useAppStore();
 
-  const [tradeType, setTradeType] = useState<StockTradeType>('buy');
+  const isExistingHolding = Boolean((stock as StockHolding)?.shares);
+  const [mode, setMode] = useState<FormMode>(isExistingHolding ? 'buy' : initialMode);
+  
   const [symbol, setSymbol] = useState(stock?.symbol || '2330.TW');
   const [name, setName] = useState(stock?.name || '台積電');
-  const [market, setMarket] = useState<'TW' | 'US'>(stock?.market || 'TW');
-  const [shares, setShares] = useState<string>('1000');
-  const [price, setPrice] = useState<string>(
+  const [market, setMarket] = useState<StockMarket>(stock?.market || 'TW');
+  const [shares, setShares] = useState<string>(isExistingHolding ? '1000' : '1000');
+  
+  // 成本單價與現價
+  const [costPrice, setCostPrice] = useState<string>(
+    stock ? String((stock as any).avgCost || (stock as any).price || (stock as any).currentPrice || '') : ''
+  );
+  const [currentPrice, setCurrentPrice] = useState<string>(
     stock ? String((stock as any).currentPrice || (stock as any).price || (stock as any).avgCost || '') : ''
   );
+  
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [customFee, setCustomFee] = useState<string>('');
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 自動估算手續費與稅費 (台股)
+  // 試算金額
   const numShares = parseFloat(shares) || 0;
-  const numPrice = parseFloat(price) || 0;
-  const totalAmount = numShares * numPrice;
-  const autoFee = market === 'TW' ? calculateTWStockFee(totalAmount) : 0;
-  const autoTax = market === 'TW' && tradeType === 'sell' ? calculateTWStockTax(totalAmount) : 0;
+  const numCost = parseFloat(costPrice) || 0;
+  const numCurrent = parseFloat(currentPrice) || numCost;
+  const totalCostAmount = numShares * numCost;
+  const autoFee = market === 'TW' ? calculateTWStockFee(totalCostAmount) : 0;
+  const autoTax = market === 'TW' && mode === 'sell' ? calculateTWStockTax(totalCostAmount) : 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
-    if (!numShares || numShares <= 0 || !numPrice || numPrice <= 0) {
-      addToast({ type: 'error', message: '請輸入正確的股數與價格' });
+    if (!symbol.trim() || !name.trim()) {
+      addToast({ type: 'error', message: '請輸入股票代碼與名稱' });
+      return;
+    }
+
+    if (!numShares || numShares <= 0 || !numCost || numCost <= 0) {
+      addToast({ type: 'error', message: '請輸入正確的持有股數與買進成本價' });
       return;
     }
 
@@ -56,32 +73,32 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
       const now = new Date().toISOString();
       const holdingId = (stock as StockHolding)?.id || 'stock_' + uuidv4().slice(0, 8);
 
-      // 若為舊持倉進行加碼或減碼，重新計算平均成本與總股數
-      let newShares = numShares;
-      let newAvgCost = numPrice;
+      let finalShares = numShares;
+      let finalAvgCost = numCost;
+      const finalCurrentPrice = numCurrent > 0 ? numCurrent : numCost;
 
-      if ((stock as StockHolding)?.shares) {
-        const oldShares = (stock as StockHolding).shares;
-        const oldAvgCost = (stock as StockHolding).avgCost;
-        if (tradeType === 'buy') {
-          newShares = oldShares + numShares;
-          newAvgCost = (oldShares * oldAvgCost + numShares * numPrice) / newShares;
-        } else if (tradeType === 'sell') {
-          newShares = Math.max(0, oldShares - numShares);
-          newAvgCost = oldAvgCost; // 賣出時平均成本不變
+      if (isExistingHolding) {
+        const oldShares = (stock as StockHolding).shares || 0;
+        const oldAvgCost = (stock as StockHolding).avgCost || 0;
+        if (mode === 'buy') {
+          finalShares = oldShares + numShares;
+          finalAvgCost = (oldShares * oldAvgCost + numShares * numCost) / finalShares;
+        } else if (mode === 'sell') {
+          finalShares = Math.max(0, oldShares - numShares);
+          finalAvgCost = oldAvgCost;
         }
       }
 
       const holding: StockHolding = {
         id: holdingId,
         userId: user.uid,
-        symbol: symbol.toUpperCase(),
+        symbol: symbol.toUpperCase().includes('.TW') || market === 'US' ? symbol.toUpperCase() : `${symbol.toUpperCase()}.TW`,
         code: symbol.replace('.TW', '').toUpperCase(),
-        name: name || symbol,
+        name: name.trim(),
         market,
-        shares: newShares,
-        avgCost: parseFloat(newAvgCost.toFixed(2)),
-        currentPrice: numPrice,
+        shares: finalShares,
+        avgCost: parseFloat(finalAvgCost.toFixed(2)),
+        currentPrice: finalCurrentPrice,
         currency: market === 'TW' ? 'TWD' : 'USD',
         createdAt: (stock as StockHolding)?.createdAt || now,
         updatedAt: now
@@ -90,7 +107,11 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
       await saveStockHolding(holding);
       addToast({
         type: 'success',
-        message: tradeType === 'buy' ? `成功買入 ${holding.name}！` : `成功賣出 ${holding.name}！`
+        message: mode === 'init'
+          ? `成功建立初始持倉「${holding.name}」！`
+          : mode === 'buy'
+          ? `成功加碼買入「${holding.name}」！`
+          : `成功賣出「${holding.name}」！`
       });
 
       if (onSuccess) onSuccess();
@@ -103,75 +124,117 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-      {/* 交易類型 (買進 / 賣出 / 配息) */}
+      {/* 模式切換 Tab */}
       <div style={{ display: 'flex', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '4px' }}>
-        {(['buy', 'sell'] as StockTradeType[]).map((t) => {
-          const isActive = tradeType === t;
-          const label = t === 'buy' ? '📈 買進 / 建倉' : '📉 賣出 / 減碼';
-          return (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTradeType(t)}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                border: 'none',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: isActive ? (t === 'buy' ? 'var(--income)' : 'var(--expense)') : 'transparent',
-                color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700,
-                fontSize: '13px',
-                cursor: 'pointer'
-              }}
-            >
-              {label}
-            </button>
-          );
-        })}
+        {!isExistingHolding ? (
+          <button
+            type="button"
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--primary)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: '13px',
+              cursor: 'default'
+            }}
+          >
+            🎯 建立初始持倉 / 興櫃持股建檔
+          </button>
+        ) : (
+          (['buy', 'sell'] as FormMode[]).map((m) => {
+            const isActive = mode === m;
+            const label = m === 'buy' ? '📈 買進加碼' : '📉 賣出減碼';
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMode(m)}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: isActive ? (m === 'buy' ? 'var(--income)' : 'var(--expense)') : 'transparent',
+                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                {label}
+              </button>
+            );
+          })
+        )}
       </div>
 
-      {/* 股票基本資訊 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+      {/* 股票市場與代碼 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '10px' }}>
+        <Select
+          label="市場類別"
+          value={market}
+          onChange={(e) => setMarket(e.target.value as StockMarket)}
+          options={[
+            { value: 'TW', label: '🇹🇼 台股/興櫃' },
+            { value: 'US', label: '🇺🇸 美股市場' }
+          ]}
+        />
         <Input
-          label="股票代碼"
+          label="股票代碼 (支援興櫃代碼例如 6789、2330)"
           value={symbol}
           onChange={(e) => setSymbol(e.target.value)}
-          placeholder="例如：2330.TW 或 AAPL"
-          required
-        />
-        <Input
-          label="股票名稱"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="例如：台積電"
+          placeholder="例如：2330、6789、AAPL"
           required
         />
       </div>
 
-      {/* 股數與價格 */}
+      {/* 股票名稱 */}
+      <Input
+        label="公司 / 股票名稱"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="例如：台積電、聯發科、興櫃精選"
+        required
+      />
+
+      {/* 股數與買進成本價 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <Input
-          label={`股數 (${market === 'TW' ? '1張=1000股' : '股'})`}
+          label={`持有股數 (${market === 'TW' ? '1張=1000股' : '股'})`}
           type="number"
           step="any"
           value={shares}
           onChange={(e) => setShares(e.target.value)}
-          placeholder="例如：1000"
+          placeholder="例如：1000、250"
           required
         />
         <Input
-          label={`成交單價 (${market === 'TW' ? 'NT$' : 'US$'})`}
+          label={`平均買進成本價 (${market === 'TW' ? 'NT$' : 'US$'})`}
           type="number"
           step="any"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-          placeholder="例如：980"
+          value={costPrice}
+          onChange={(e) => setCostPrice(e.target.value)}
+          placeholder="例如：85.5、980"
           required
         />
       </div>
 
-      {/* 自動試算摘要 */}
+      {/* 最新參考現價 (自訂/興櫃用) */}
+      {!isExistingHolding && (
+        <Input
+          label={`目前參考市價 (${market === 'TW' ? 'NT$' : 'US$'}，若留空自動同步成本價)`}
+          type="number"
+          step="any"
+          value={currentPrice}
+          onChange={(e) => setCurrentPrice(e.target.value)}
+          placeholder="可輸入目前最新市價"
+        />
+      )}
+
+      {/* 自動試算卡片 */}
       <div
         style={{
           backgroundColor: 'var(--bg-tertiary)',
@@ -184,10 +247,10 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-          <span>交易總額估計：</span>
+          <span>持倉總成本估計：</span>
           <strong style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
             {market === 'TW' ? '$' : 'US$'}
-            {Math.round(totalAmount).toLocaleString()}
+            {Math.round(totalCostAmount).toLocaleString()}
           </strong>
         </div>
         {market === 'TW' && (
@@ -200,18 +263,18 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
         )}
       </div>
 
-      {/* 日期與備註 */}
+      {/* 建倉日期與投資筆記 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
         <Input
           type="date"
-          label="交易日期"
+          label="建倉 / 交易日期"
           value={date}
           onChange={(e) => setDate(e.target.value)}
           required
         />
         <Input
           label="投資策略 / 備註"
-          placeholder="例如：定期定額、波段停利"
+          placeholder="例如：興櫃潛力股、定期定額"
           value={note}
           onChange={(e) => setNote(e.target.value)}
         />
@@ -224,7 +287,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
           </Button>
         )}
         <Button type="submit" variant="primary" loading={loading} style={{ flex: 1 }}>
-          確認寫入持倉
+          確認建立持倉
         </Button>
       </div>
     </form>

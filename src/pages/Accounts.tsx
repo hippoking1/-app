@@ -145,20 +145,48 @@ export const Accounts: React.FC = () => {
                 </div>
               </div>
 
-              {/* 餘額 */}
+              {/* 餘額與額度顯示 */}
               <div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>目前結餘</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    {acc.type === 'credit_card' ? '已刷卡未出帳 / 應繳' : '目前結餘'}
+                  </span>
+                  {acc.type === 'credit_card' && acc.creditLimit && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      額度 {formatCurrency(acc.creditLimit)}
+                    </span>
+                  )}
+                </div>
                 <div
                   className="font-mono"
                   style={{
                     fontSize: '24px',
                     fontWeight: 800,
                     marginTop: '2px',
-                    color: acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)'
+                    color: acc.type === 'credit_card' ? 'var(--expense)' : acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)'
                   }}
                 >
                   {formatCurrency(acc.balance)}
                 </div>
+
+                {acc.type === 'credit_card' && acc.creditLimit && (
+                  <div style={{ marginTop: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      <span>可用額度：{formatCurrency(Math.max(0, acc.creditLimit - Math.abs(acc.balance)))}</span>
+                      <span>已用 {((Math.abs(acc.balance) / acc.creditLimit) * 100).toFixed(1)}%</span>
+                    </div>
+                    <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: `${Math.min(100, (Math.abs(acc.balance) / acc.creditLimit) * 100)}%`,
+                          height: '100%',
+                          backgroundColor: (Math.abs(acc.balance) / acc.creditLimit) > 0.8 ? 'var(--expense)' : 'var(--warning)',
+                          borderRadius: 'var(--radius-full)'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 底部轉帳快速鍵 */}

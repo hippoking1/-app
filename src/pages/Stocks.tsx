@@ -45,7 +45,7 @@ export const Stocks: React.FC = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Button
             variant="secondary"
             size="sm"
@@ -56,12 +56,23 @@ export const Stocks: React.FC = () => {
             更新股價
           </Button>
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setSelectedStock(undefined);
+              setTradeModalOpen(true);
+            }}
+            icon={<Plus size={16} />}
+          >
+            🎯 初始自訂建倉 (含興櫃)
+          </Button>
+          <Button
             variant="primary"
             size="sm"
             onClick={() => setSearchModalOpen(true)}
-            icon={<Plus size={16} />}
+            icon={<Search size={16} />}
           >
-            新增持股 / 買入
+            搜尋股票行情
           </Button>
         </div>
       </div>

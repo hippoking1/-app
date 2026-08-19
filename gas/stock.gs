@@ -1,5 +1,5 @@
 /**
- * 股票即時/盤後報價服務模組 (台股 TWSE + 美股 Finnhub)
+ * 股票即時/盤後報價服務模組 (台股上市 TWSE + 上櫃/興櫃 TPEx + 美股 Finnhub)
  */
 
 /**
@@ -71,20 +71,20 @@ function handleBatchQuotes(payload) {
 }
 
 /**
- * 查詢台股個股報價 (TWSE OpenAPI)
+ * 查詢台股個股報價 (TWSE 上市 + TPEx 上櫃/興櫃)
  */
 function fetchTWStockQuote(symbol) {
   const cleanCode = symbol.replace('.TW', '').replace('.TWO', '');
   
-  // 嘗試從台股當日全部收盤行情抓取
+  // 1. 嘗試從上市 + 上櫃/興櫃當日清單比對
   const allStocks = getOrFetchTWStockList();
   const target = allStocks.find(function(s) {
     return s.Code === cleanCode;
   });
 
   if (target) {
-    const currentPrice = parseFloat(target.ClosingPrice.replace(/,/g, '')) || 0;
-    const change = parseFloat(target.Change.replace(/,/g, '')) || 0;
+    const currentPrice = parseFloat((target.ClosingPrice || target.Close || '0').replace(/,/g, '')) || 0;
+    const change = parseFloat((target.Change || '0').replace(/,/g, '')) || 0;
     const previousClose = currentPrice - change;
     const changePercent = previousClose > 0 ? (change / previousClose) * 100 : 0;
 
@@ -93,31 +93,33 @@ function fetchTWStockQuote(symbol) {
       code: cleanCode,
       name: target.Name || cleanCode,
       market: 'TW',
+      stockType: target.type || '台股',
       currency: 'TWD',
       currentPrice: currentPrice,
       previousClose: previousClose,
       change: change,
       changePercent: parseFloat(changePercent.toFixed(2)),
-      high: parseFloat(target.HighestPrice.replace(/,/g, '')) || currentPrice,
-      low: parseFloat(target.LowestPrice.replace(/,/g, '')) || currentPrice,
-      open: parseFloat(target.OpeningPrice.replace(/,/g, '')) || currentPrice,
-      volume: parseInt(target.TradeVolume.replace(/,/g, ''), 10) || 0,
+      high: parseFloat((target.HighestPrice || target.High || '0').replace(/,/g, '')) || currentPrice,
+      low: parseFloat((target.LowestPrice || target.Low || '0').replace(/,/g, '')) || currentPrice,
+      open: parseFloat((target.OpeningPrice || target.Open || '0').replace(/,/g, '')) || currentPrice,
+      volume: parseInt((target.TradeVolume || '0').replace(/,/g, ''), 10) || 0,
       updatedAt: new Date().toISOString()
     };
   }
 
-  // 若盤後清單無此股（如剛掛牌或櫃買），回傳備用預設結構
+  // 若盤後清單無此股（如剛登錄興櫃或特別股），回傳基本自訂結構，不阻擋建倉
   return {
     symbol: cleanCode + '.TW',
     code: cleanCode,
     name: cleanCode,
     market: 'TW',
+    stockType: '興櫃/自訂',
     currency: 'TWD',
     currentPrice: 0,
     change: 0,
     changePercent: 0,
     updatedAt: new Date().toISOString(),
-    isMock: true
+    isCustom: true
   };
 }
 
@@ -127,7 +129,6 @@ function fetchTWStockQuote(symbol) {
 function fetchUSStockQuote(symbol) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('FINNHUB_API_KEY');
   if (!apiKey) {
-    // 若未設定 Finnhub Key，回傳基本模擬資料防止整個畫面當掉
     return {
       symbol: symbol,
       name: symbol,
@@ -150,9 +151,17 @@ function fetchUSStockQuote(symbol) {
   }
 
   const data = JSON.parse(res.getContentText());
-  // Finnhub quote: c = current, d = change, dp = percent change, h = high, l = low, o = open, pc = prev close
-  if (!data || data.c === 0 && data.pc === 0) {
-    return { error: '找不到美股代碼 ' + symbol + ' 之即時行情' };
+  if (!data || (data.c === 0 && data.pc === 0)) {
+    return {
+      symbol: symbol,
+      code: symbol,
+      name: symbol,
+      market: 'US',
+      currency: 'USD',
+      currentPrice: 0,
+      updatedAt: new Date().toISOString(),
+      isCustom: true
+    };
   }
 
   return {
@@ -173,7 +182,7 @@ function fetchUSStockQuote(symbol) {
 }
 
 /**
- * 股票搜尋 (支援台股代碼/名稱與美股 Symbol)
+ * 股票搜尋 (支援台股上市/上櫃/興櫃代碼與名稱、美股 Symbol)
  */
 function handleSearchStock(payload) {
   const keyword = (payload.keyword || '').trim();
@@ -182,20 +191,21 @@ function handleSearchStock(payload) {
   const results = [];
   const upperKw = keyword.toUpperCase();
 
-  // 1. 搜尋台股
+  // 1. 搜尋台股上市 + 上櫃 + 興櫃
   const twList = getOrFetchTWStockList();
   const twMatches = twList.filter(function(s) {
     return s.Code.includes(upperKw) || (s.Name && s.Name.includes(keyword));
-  }).slice(0, 8);
+  }).slice(0, 10);
 
   twMatches.forEach(function(s) {
-    const price = parseFloat((s.ClosingPrice || '0').replace(/,/g, '')) || 0;
+    const price = parseFloat((s.ClosingPrice || s.Close || '0').replace(/,/g, '')) || 0;
     const change = parseFloat((s.Change || '0').replace(/,/g, '')) || 0;
     results.push({
       symbol: s.Code + '.TW',
       code: s.Code,
       name: s.Name || s.Code,
       market: 'TW',
+      stockType: s.type || '台股',
       currency: 'TWD',
       price: price,
       change: change
@@ -220,6 +230,7 @@ function handleSearchStock(payload) {
             code: item.symbol,
             name: item.description || item.symbol,
             market: 'US',
+            stockType: '美股',
             currency: 'USD',
             price: 0
           });
@@ -234,25 +245,27 @@ function handleSearchStock(payload) {
 }
 
 /**
- * 取得或快取 TWSE 全部台股收盤清單
+ * 取得或快取台股收盤清單 (整合 TWSE 上市 + TPEx 櫃買中心/興櫃)
  */
 function getOrFetchTWStockList() {
-  const cacheKey = 'twse_all_stocks_v1';
+  const cacheKey = 'twse_tpex_all_stocks_v2';
   const cache = CacheService.getScriptCache();
   const cached = cache.get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch(e){}
   }
 
+  const allList = [];
+
+  // A. 抓取 TWSE 上市股票
   try {
-    const url = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
-    const res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    const twseUrl = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
+    const res = UrlFetchApp.fetch(twseUrl, { muteHttpExceptions: true });
     if (res.getResponseCode() === 200) {
       const data = JSON.parse(res.getContentText());
-      if (Array.isArray(data) && data.length > 0) {
-        // Cache limit 100KB, 故只快取熱門股票或壓縮
-        const simplified = data.map(function(s) {
-          return {
+      if (Array.isArray(data)) {
+        data.forEach(function(s) {
+          allList.push({
             Code: s.Code,
             Name: s.Name,
             ClosingPrice: s.ClosingPrice,
@@ -260,22 +273,48 @@ function getOrFetchTWStockList() {
             HighestPrice: s.HighestPrice,
             LowestPrice: s.LowestPrice,
             OpeningPrice: s.OpeningPrice,
-            TradeVolume: s.TradeVolume
-          };
+            TradeVolume: s.TradeVolume,
+            type: '上市'
+          });
         });
-        
-        // 分塊或簡易快取 (15 分鐘)
-        try {
-          cache.put(cacheKey, JSON.stringify(simplified.slice(0, 500)), 900);
-        } catch(e){}
-        return simplified;
       }
     }
   } catch (err) {
-    Logger.log('TWSE OpenAPI 取得失敗: ' + err.toString());
+    Logger.log('TWSE 上市 OpenAPI 取得失敗: ' + err.toString());
   }
 
-  return [];
+  // B. 抓取 TPEx 上櫃/興櫃股票
+  try {
+    const tpexUrl = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes';
+    const res2 = UrlFetchApp.fetch(tpexUrl, { muteHttpExceptions: true });
+    if (res2.getResponseCode() === 200) {
+      const data2 = JSON.parse(res2.getContentText());
+      if (Array.isArray(data2)) {
+        data2.forEach(function(s) {
+          allList.push({
+            Code: s.SecuritiesCompanyCode || s.Code,
+            Name: s.CompanyName || s.Name,
+            ClosingPrice: s.Close || s.ClosingPrice,
+            Change: s.Change,
+            HighestPrice: s.High,
+            LowestPrice: s.Low,
+            OpeningPrice: s.Open,
+            TradeVolume: s.TradingShares,
+            type: '上櫃/興櫃'
+          });
+        });
+      }
+    }
+  } catch (err) {
+    Logger.log('TPEx 櫃買 OpenAPI 取得失敗: ' + err.toString());
+  }
+
+  // 寫入快取 (15 分鐘)
+  try {
+    cache.put(cacheKey, JSON.stringify(allList.slice(0, 1000)), 900);
+  } catch(e){}
+
+  return allList;
 }
 
 function handleGetTWStockAll() {

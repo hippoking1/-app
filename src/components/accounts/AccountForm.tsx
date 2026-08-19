@@ -37,6 +37,9 @@ export const AccountForm: React.FC<AccountFormProps> = ({
   const [balance, setBalance] = useState<string>(
     initialData ? String(initialData.balance) : '0'
   );
+  const [creditLimit, setCreditLimit] = useState<string>(
+    initialData?.creditLimit ? String(initialData.creditLimit) : '50000'
+  );
   const [color, setColor] = useState(initialData?.color || PRESET_COLORS[0]);
   const [loading, setLoading] = useState(false);
 
@@ -50,6 +53,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
     }
 
     const numBalance = parseFloat(balance) || 0;
+    const numCreditLimit = type === 'credit_card' ? parseFloat(creditLimit) || 0 : undefined;
     setLoading(true);
 
     try {
@@ -62,6 +66,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({
         icon: type === 'cash' ? 'Wallet' : type === 'credit_card' ? 'CreditCard' : 'Building2',
         color,
         balance: numBalance,
+        creditLimit: numCreditLimit,
         currency: 'TWD',
         isArchived: initialData?.isArchived || false,
         sortOrder: initialData?.sortOrder || Date.now(),
@@ -98,13 +103,25 @@ export const AccountForm: React.FC<AccountFormProps> = ({
       />
 
       <Input
-        label="目前帳戶餘額 (NT$)"
+        label={type === 'credit_card' ? '目前已刷卡未出帳金額 / 應繳金額 (NT$)' : '目前帳戶餘額 (NT$)'}
         type="number"
         step="any"
         value={balance}
         onChange={(e) => setBalance(e.target.value)}
         required
       />
+
+      {type === 'credit_card' && (
+        <Input
+          label="信用卡信用總額度 (NT$)"
+          type="number"
+          step="any"
+          value={creditLimit}
+          onChange={(e) => setCreditLimit(e.target.value)}
+          placeholder="例如：50000、100000"
+          required
+        />
+      )}
 
       {/* 色彩選擇 */}
       <div>

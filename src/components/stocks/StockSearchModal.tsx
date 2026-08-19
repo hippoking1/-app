@@ -100,8 +100,36 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
           ))}
 
           {!loading && keyword && results.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)', fontSize: '13px' }}>
-              查無符合「{keyword}」之股票代碼
+            <div style={{ textAlign: 'center', padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                上市/上櫃清單中查無「{keyword}」
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const isNum = /^\d+$/.test(keyword);
+                  handleSelect({
+                    symbol: isNum ? `${keyword}.TW` : keyword.toUpperCase(),
+                    code: keyword.toUpperCase(),
+                    name: keyword.toUpperCase(),
+                    market: isNum ? 'TW' : 'US',
+                    currency: isNum ? 'TWD' : 'USD',
+                    price: 0
+                  });
+                }}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'var(--primary-glow)',
+                  border: '1px solid var(--primary)',
+                  borderRadius: 'var(--radius-md)',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ➕ 以自訂代碼「{keyword}」直接建立興櫃/初始持倉
+              </button>
             </div>
           )}
         </div>

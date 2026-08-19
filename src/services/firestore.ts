@@ -36,10 +36,16 @@ class LocalStore {
   }
 }
 
+// 記憶體初始化鎖，防止同一 Client Session 重複觸發種子寫入
+const initializedUserMap = new Set<string>();
+
 /**
  * 初始化使用者預設資料 (新使用者首次登入)
  */
 export async function initializeUserData(userId: string): Promise<void> {
+  if (initializedUserMap.has(userId)) return;
+  initializedUserMap.add(userId);
+
   const { accounts, categories } = generateInitialSeedData(userId);
 
   if (!isFirebaseConfigured) {
@@ -53,23 +59,27 @@ export async function initializeUserData(userId: string): Promise<void> {
     return;
   }
 
-  // 檢查 Firestore 是否已有帳戶
-  const accsRef = collection(db, 'users', userId, 'accounts');
-  const snap = await getDocs(accsRef);
-  if (snap.empty) {
-    const batch = writeBatch(db);
-    
-    accounts.forEach(acc => {
-      const ref = doc(db, 'users', userId, 'accounts', acc.id);
-      batch.set(ref, acc);
-    });
+  try {
+    // 檢查 Firestore 是否已有帳戶
+    const accsRef = collection(db, 'users', userId, 'accounts');
+    const snap = await getDocs(accsRef);
+    if (snap.empty) {
+      const batch = writeBatch(db);
+      
+      accounts.forEach(acc => {
+        const ref = doc(db, 'users', userId, 'accounts', acc.id);
+        batch.set(ref, acc, { merge: true });
+      });
 
-    categories.forEach(cat => {
-      const ref = doc(db, 'users', userId, 'categories', cat.id);
-      batch.set(ref, cat);
-    });
+      categories.forEach(cat => {
+        const ref = doc(db, 'users', userId, 'categories', cat.id);
+        batch.set(ref, cat, { merge: true });
+      });
 
-    await batch.commit();
+      await batch.commit();
+    }
+  } catch (err) {
+    console.warn('[Firestore] 初始化使用者種子資料失敗:', err);
   }
 }
 
@@ -81,7 +91,14 @@ export function subscribeAccounts(userId: string, callback: (accounts: Account[]
   if (!isFirebaseConfigured) {
     const load = () => {
       const data = LocalStore.get<Account[]>('accounts_' + userId, []);
-      callback(data.sort((a, b) => a.sortOrder - b.sortOrder));
+      // 去重
+      const seen = new Set<string>();
+      const deduped = data.filter(a => {
+        if (seen.has(a.name)) return false;
+        seen.add(a.name);
+        return true;
+      });
+      callback(deduped.sort((a, b) => a.sortOrder - b.sortOrder));
     };
     load();
     window.addEventListener('demo_storage_update', load);
@@ -93,7 +110,29 @@ export function subscribeAccounts(userId: string, callback: (accounts: Account[]
     q,
     (snapshot) => {
       const accs = snapshot.docs.map(d => d.data() as Account);
-      callback(accs);
+      // 自動依名稱去重
+      const seen = new Set<string>();
+      const deduped: Account[] = [];
+      const duplicateIds: string[] = [];
+
+      accs.forEach(acc => {
+        const key = acc.name;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(acc);
+        } else {
+          duplicateIds.push(acc.id);
+        }
+      });
+
+      // 背景清理 Firestore 中重複的帳戶文檔
+      if (duplicateIds.length > 0) {
+        duplicateIds.forEach(id => {
+          deleteDoc(doc(db, 'users', userId, 'accounts', id)).catch(() => {});
+        });
+      }
+
+      callback(deduped);
     },
     (error) => {
       console.warn('[Firestore] subscribeAccounts 存取受限或未初始化:', error);
@@ -134,7 +173,14 @@ export function subscribeCategories(userId: string, callback: (categories: Categ
   if (!isFirebaseConfigured) {
     const load = () => {
       const data = LocalStore.get<Category[]>('categories_' + userId, []);
-      callback(data.sort((a, b) => a.sortOrder - b.sortOrder));
+      const seen = new Set<string>();
+      const deduped = data.filter(c => {
+        const key = `${c.type}_${c.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      callback(deduped.sort((a, b) => a.sortOrder - b.sortOrder));
     };
     load();
     window.addEventListener('demo_storage_update', load);
@@ -146,7 +192,29 @@ export function subscribeCategories(userId: string, callback: (categories: Categ
     q,
     (snapshot) => {
       const cats = snapshot.docs.map(d => d.data() as Category);
-      callback(cats);
+      // 自動依 (type + name) 去重
+      const seen = new Set<string>();
+      const deduped: Category[] = [];
+      const duplicateIds: string[] = [];
+
+      cats.forEach(cat => {
+        const key = `${cat.type}_${cat.name}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          deduped.push(cat);
+        } else {
+          duplicateIds.push(cat.id);
+        }
+      });
+
+      // 背景清理 Firestore 中先前重複產生的分類文檔
+      if (duplicateIds.length > 0) {
+        duplicateIds.forEach(id => {
+          deleteDoc(doc(db, 'users', userId, 'categories', id)).catch(() => {});
+        });
+      }
+
+      callback(deduped);
     },
     (error) => {
       console.warn('[Firestore] subscribeCategories error:', error);
