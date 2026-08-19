@@ -36,7 +36,9 @@ export function useAccounts() {
     initializeUserData(user.uid).catch(console.error);
 
     const unsubscribe = subscribeAccounts(user.uid, (data) => {
-      setAccounts(data);
+      // 強制依名稱唯一去重
+      const uniqueAccs = Array.from(new Map(data.map((a) => [a.name, a])).values());
+      setAccounts(uniqueAccs);
       setLoading(false);
     });
 
@@ -63,10 +65,12 @@ export function useCategories(type?: 'expense' | 'income') {
 
     setLoading(true);
     const unsubscribe = subscribeCategories(user.uid, (data) => {
+      // 強制依 (type + name) 唯一去重
+      const uniqueCats = Array.from(new Map(data.map((c) => [`${c.type}_${c.name}`, c])).values());
       if (type) {
-        setCategories(data.filter((c) => c.type === type));
+        setCategories(uniqueCats.filter((c) => c.type === type));
       } else {
-        setCategories(data);
+        setCategories(uniqueCats);
       }
       setLoading(false);
     });
