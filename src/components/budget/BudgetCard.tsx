@@ -8,6 +8,8 @@ import { useAppStore } from '@/stores/appStore';
 import { Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
+import { getSafeIcon } from '@/utils/iconHelper';
+
 interface BudgetCardProps {
   status: BudgetStatus;
   onEdit?: () => void;
@@ -19,7 +21,7 @@ export const BudgetCard: React.FC<BudgetCardProps> = ({ status, onEdit }) => {
 
   const isGlobal = !budget.categoryId;
   const title = isGlobal ? '📊 全月總預算' : category?.name || '特定分類';
-  const IconComponent = category ? (Icons as any)[category.icon] || Icons.Tag : Icons.Target;
+  const IconComponent = isGlobal ? Icons.Target : getSafeIcon(category?.icon);
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();

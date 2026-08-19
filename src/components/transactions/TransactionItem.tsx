@@ -6,6 +6,8 @@ import { formatCurrency } from '@/utils/analytics';
 import { deleteTransaction } from '@/services/firestore';
 import { useAppStore } from '@/stores/appStore';
 
+import { getSafeIcon } from '@/utils/iconHelper';
+
 interface TransactionItemProps {
   transaction: Transaction;
   category?: Category;
@@ -26,9 +28,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   const IconComponent = isTransfer
     ? ArrowRightLeft
-    : category
-    ? (Icons as any)[category.icon] || Icons.Tag
-    : Icons.HelpCircle;
+    : getSafeIcon(category?.icon);
 
   const iconColor = isTransfer
     ? 'var(--info)'

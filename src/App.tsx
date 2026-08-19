@@ -12,6 +12,7 @@ import { AIBookkeeper } from '@/pages/AIBookkeeper';
 import { Settings } from '@/pages/Settings';
 import { useAppStore } from '@/stores/appStore';
 import { subscribeAuthState } from '@/services/auth';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
   const { setUser, setIsLoadingAuth } = useAppStore();
@@ -27,26 +28,28 @@ export const App: React.FC = () => {
   }, [setUser, setIsLoadingAuth]);
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <ErrorBoundary>
+      <HashRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        {/* 需認證之主框架路由 */}
-        <Route element={<AppShell />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/accounts" element={<Accounts />} />
-          <Route path="/budget" element={<BudgetPage />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/stocks" element={<Stocks />} />
-          <Route path="/ai" element={<AIBookkeeper />} />
-          <Route path="/settings" element={<Settings />} />
-        </Route>
+          {/* 需認證之主框架路由 */}
+          <Route element={<AppShell />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/accounts" element={<Accounts />} />
+            <Route path="/budget" element={<BudgetPage />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/stocks" element={<Stocks />} />
+            <Route path="/ai" element={<AIBookkeeper />} />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
 
-        {/* 404 Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </HashRouter>
+          {/* 404 Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </HashRouter>
+    </ErrorBoundary>
   );
 };
 

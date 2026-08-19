@@ -1,6 +1,6 @@
 import React from 'react';
 import { Category } from '@/types';
-import * as Icons from 'lucide-react';
+import { getSafeIcon } from '@/utils/iconHelper';
 
 interface CategoryPickerProps {
   categories: Category[];
@@ -26,7 +26,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
     >
       {categories.map((cat) => {
         const isSelected = cat.id === selectedId;
-        const IconComponent = (Icons as any)[cat.icon] || Icons.Tag;
+        const IconComponent = getSafeIcon(cat.icon);
 
         return (
           <button

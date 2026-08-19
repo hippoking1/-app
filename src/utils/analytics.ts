@@ -1,10 +1,15 @@
-import { Transaction, Category, Account } from '@/types';
-import { format, subMonths, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { Transaction, Category } from '@/types';
+import { format, subMonths, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+
+function getMonthKey(dateStr?: string): string {
+  if (!dateStr) return '';
+  return dateStr.slice(0, 7).replace('/', '-');
+}
 
 /**
  * 取得月度收支趨勢數據 (預設近 6 個月)
  */
-export function getMonthlyTrends(transactions: Transaction[], monthsCount = 6) {
+export function getMonthlyTrends(transactions: Transaction[] = [], monthsCount = 6) {
   const now = new Date();
   const months: string[] = [];
 
@@ -12,17 +17,26 @@ export function getMonthlyTrends(transactions: Transaction[], monthsCount = 6) {
     months.push(format(subMonths(now, i), 'yyyy-MM'));
   }
 
+  const safeList = transactions || [];
+
   return months.map((month) => {
-    const monthTxs = transactions.filter((t) => t.date.startsWith(month));
+    const monthTxs = safeList.filter((t) => t && t.date && getMonthKey(t.date) === month);
     const income = monthTxs
       .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     const expense = monthTxs
       .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    let displayMonth = month;
+    try {
+      displayMonth = format(parseISO(`${month}-01`), 'M月');
+    } catch (e) {
+      displayMonth = month.slice(5) + '月';
+    }
 
     return {
-      month: format(parseISO(`${month}-01`), 'M月'),
+      month: displayMonth,
       fullMonth: month,
       income,
       expense,
@@ -35,25 +49,31 @@ export function getMonthlyTrends(transactions: Transaction[], monthsCount = 6) {
  * 取得分類佔比統計 (圓餅圖用)
  */
 export function getCategoryBreakdown(
-  transactions: Transaction[],
-  categories: Category[],
+  transactions: Transaction[] = [],
+  categories: Category[] = [],
   type: 'expense' | 'income' = 'expense',
   month?: string
 ) {
-  let filtered = transactions.filter((t) => t.type === type);
-  if (month) {
-    filtered = filtered.filter((t) => t.date.startsWith(month));
+  const safeList = transactions || [];
+  const targetMonth = month ? month.replace('/', '-') : undefined;
+
+  let filtered = safeList.filter((t) => t && t.type === type);
+  if (targetMonth) {
+    filtered = filtered.filter((t) => t.date && getMonthKey(t.date) === targetMonth);
   }
 
   const categoryMap = new Map<string, Category>();
-  categories.forEach((c) => categoryMap.set(c.id, c));
+  (categories || []).forEach((c) => {
+    if (c && c.id) categoryMap.set(c.id, c);
+  });
 
-  const totalAmount = filtered.reduce((sum, t) => sum + t.amount, 0);
+  const totalAmount = filtered.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
   const group = new Map<string, number>();
 
   filtered.forEach((t) => {
-    const current = group.get(t.categoryId) || 0;
-    group.set(t.categoryId, current + t.amount);
+    const catId = t.categoryId || 'unknown';
+    const current = group.get(catId) || 0;
+    group.set(catId, current + (Number(t.amount) || 0));
   });
 
   const list = Array.from(group.entries())
@@ -80,22 +100,32 @@ export function getCategoryBreakdown(
 /**
  * 取得指定月份每日花費柱狀圖數據
  */
-export function getDailySpending(transactions: Transaction[], monthStr: string) {
-  const monthStart = startOfMonth(parseISO(`${monthStr}-01`));
-  const monthEnd = endOfMonth(monthStart);
-  const daysInMonth = monthEnd.getDate();
+export function getDailySpending(transactions: Transaction[] = [], monthStr: string) {
+  const targetMonth = monthStr.replace('/', '-');
+  let daysInMonth = 30;
+
+  try {
+    const monthStart = startOfMonth(parseISO(`${targetMonth}-01`));
+    const monthEnd = endOfMonth(monthStart);
+    daysInMonth = monthEnd.getDate() || 30;
+  } catch (e) {
+    daysInMonth = 30;
+  }
 
   const dailyMap = new Map<number, number>();
   for (let d = 1; d <= daysInMonth; d++) {
     dailyMap.set(d, 0);
   }
 
-  transactions
-    .filter((t) => t.type === 'expense' && t.date.startsWith(monthStr))
+  (transactions || [])
+    .filter((t) => t && t.type === 'expense' && t.date && getMonthKey(t.date) === targetMonth)
     .forEach((t) => {
-      const dayNum = parseInt(t.date.split('-')[2], 10);
-      const cur = dailyMap.get(dayNum) || 0;
-      dailyMap.set(dayNum, cur + t.amount);
+      const parts = t.date.replace(/\//g, '-').split('-');
+      const dayNum = parseInt(parts[2], 10);
+      if (!isNaN(dayNum) && dayNum >= 1 && dayNum <= daysInMonth) {
+        const cur = dailyMap.get(dayNum) || 0;
+        dailyMap.set(dayNum, cur + (Number(t.amount) || 0));
+      }
     });
 
   const totalExpense = Array.from(dailyMap.values()).reduce((a, b) => a + b, 0);
@@ -128,7 +158,7 @@ export function formatCurrency(amount: number, currency = 'TWD'): string {
  * 格式化精確小數位數貨幣 (股票用)
  */
 export function formatStockPrice(price: number, currency = 'TWD'): string {
-  if (isNaN(price)) return '0.00';
+  if (isNaN(price) || price === null || price === undefined) return '0.00';
   const decimals = currency === 'USD' ? 2 : price < 100 ? 2 : 1;
   return price.toLocaleString('zh-TW', {
     minimumFractionDigits: decimals,

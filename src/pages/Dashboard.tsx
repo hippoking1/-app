@@ -20,6 +20,7 @@ import {
   WalletCards
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
+import { getSafeIcon } from '@/utils/iconHelper';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -228,7 +229,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="grid-3">
           {accounts.map((acc) => {
-            const IconComponent = (Icons as any)[acc.icon] || Icons.Building2;
+            const IconComponent = getSafeIcon(acc.icon, Icons.Building2);
             return (
               <Card key={acc.id} interactive padding="md" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div

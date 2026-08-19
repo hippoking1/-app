@@ -9,8 +9,8 @@ import { useAppStore } from '@/stores/appStore';
 import { Account } from '@/types';
 import { formatCurrency } from '@/utils/analytics';
 import { deleteAccount } from '@/services/firestore';
-import { Plus, ArrowRightLeft, Edit3, Trash2, Wallet, Building2, CreditCard } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import { Plus, Edit3, Trash2, ArrowRightLeft } from 'lucide-react';
+import { getSafeIcon } from '@/utils/iconHelper';
 
 export const Accounts: React.FC = () => {
   const { user, addToast } = useAppStore();
@@ -93,7 +93,7 @@ export const Accounts: React.FC = () => {
       {/* 帳戶列表 Grid */}
       <div className="grid-3">
         {accounts.map((acc) => {
-          const IconComponent = (Icons as any)[acc.icon] || Icons.Building2;
+          const IconComponent = getSafeIcon(acc.icon);
           return (
             <Card key={acc.id} glass interactive style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* 頂部名稱與操作 */}
