@@ -39,18 +39,9 @@ class LocalStore {
 /**
  * 徹底移除物件中的 undefined 屬性，防止 Firestore 拋出 Unsupported field value: undefined
  */
-function cleanUndefined<T extends Record<string, any>>(obj: T): T {
-  const result: any = {};
-  Object.keys(obj).forEach((key) => {
-    if (obj[key] !== undefined) {
-      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
-        result[key] = cleanUndefined(obj[key]);
-      } else {
-        result[key] = obj[key];
-      }
-    }
-  });
-  return result;
+function cleanUndefined<T>(obj: T): T {
+  if (obj === undefined || obj === null) return obj;
+  return JSON.parse(JSON.stringify(obj));
 }
 
 // 記憶體初始化鎖，防止同一 Client Session 重複觸發種子寫入
