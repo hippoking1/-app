@@ -31,16 +31,27 @@ export function subscribeAuthState(callback: (user: AuthUser | null) => void): (
     return () => {};
   }
 
+  // 1. 優先使用本地快取的穩定登入狀態，徹底防止網絡抖動造成未授權轉跳
+  const cachedUserStr = localStorage.getItem('smart_auth_user_cache');
+  if (cachedUserStr) {
+    try {
+      callback(JSON.parse(cachedUserStr));
+    } catch (e) {}
+  }
+
   return onAuthStateChanged(auth, (fbUser: FirebaseUser | null) => {
     if (fbUser) {
-      callback({
+      const authUser: AuthUser = {
         uid: fbUser.uid,
         isAnonymous: fbUser.isAnonymous,
         displayName: fbUser.displayName || (fbUser.isAnonymous ? '訪客使用者' : '使用者'),
         email: fbUser.email,
         photoURL: fbUser.photoURL
-      });
+      };
+      localStorage.setItem('smart_auth_user_cache', JSON.stringify(authUser));
+      callback(authUser);
     } else {
+      localStorage.removeItem('smart_auth_user_cache');
       callback(null);
     }
   });
@@ -137,6 +148,7 @@ export async function upgradeAnonymousWithGoogle(): Promise<AuthUser> {
  * 登出
  */
 export async function logout(): Promise<void> {
+  localStorage.removeItem('smart_auth_user_cache');
   if (!isFirebaseConfigured) {
     localStorage.removeItem('smart_expense_demo_user');
     return;
