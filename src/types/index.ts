@@ -148,6 +148,7 @@ export interface StockQuote {
   code: string;
   name: string;
   market: StockMarket;
+  stockType?: string; // 上市 / 上櫃/興櫃 / 美股
   currency: string;
   currentPrice: number;
   previousClose: number;
@@ -170,6 +171,7 @@ export interface StockSearchResult {
   code: string;
   name: string;
   market: StockMarket;
+  stockType?: string; // 上市 / 上櫃/興櫃 / 美股
   currency: string;
   price: number;
   change?: number;

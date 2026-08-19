@@ -115,11 +115,21 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                     fontWeight: 700,
                     padding: '2px 6px',
                     borderRadius: 'var(--radius-xs)',
-                    backgroundColor: item.market === 'TW' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(99, 102, 241, 0.2)',
-                    color: item.market === 'TW' ? 'var(--income)' : 'var(--primary-light)'
+                    backgroundColor:
+                      item.stockType?.includes('興櫃') || item.symbol.endsWith('.TWO')
+                        ? 'rgba(168, 85, 247, 0.2)'
+                        : item.market === 'TW'
+                        ? 'rgba(16, 185, 129, 0.2)'
+                        : 'rgba(99, 102, 241, 0.2)',
+                    color:
+                      item.stockType?.includes('興櫃') || item.symbol.endsWith('.TWO')
+                        ? 'var(--purple)'
+                        : item.market === 'TW'
+                        ? 'var(--income)'
+                        : 'var(--primary-light)'
                   }}
                 >
-                  {item.market}
+                  {item.stockType || item.market}
                 </span>
                 <div>
                   <div style={{ fontSize: '14px', fontWeight: 700 }}>
@@ -137,6 +147,11 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                     {item.currency === 'USD' ? 'US$' : '$'}
                     {formatStockPrice(item.price, item.currency)}
                   </div>
+                  {item.change !== undefined && item.change !== 0 && (
+                    <div style={{ fontSize: '11px', color: item.change > 0 ? 'var(--income)' : 'var(--expense)' }}>
+                      {item.change > 0 ? '+' : ''}{item.change}
+                    </div>
+                  )}
                 </div>
               )}
             </button>
