@@ -167,14 +167,15 @@ export function useStockHoldings() {
 
     setLoading(true);
     const unsubscribe = subscribeStockHoldings(userId, (data) => {
-      setHoldings(data);
+      const safeData = Array.isArray(data) ? data : [];
+      setHoldings(safeData);
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [userId]);
 
-  return { holdings, loading };
+  return { holdings: Array.isArray(holdings) ? holdings : [], loading };
 }
 
 /**

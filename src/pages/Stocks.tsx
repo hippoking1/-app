@@ -14,13 +14,14 @@ import { TrendingUp, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 
 export const Stocks: React.FC = () => {
   const { holdings } = useStockHoldings();
-  const { updateAllPrices, isUpdating } = useBatchUpdateHoldings(holdings);
+  const safeHoldings = Array.isArray(holdings) ? holdings.filter(Boolean) : [];
+  const { updateAllPrices, isUpdating } = useBatchUpdateHoldings(safeHoldings);
 
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
   const [isTradeModalOpen, setTradeModalOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<StockSearchResult | StockHolding | undefined>(undefined);
 
-  const portfolio = calculatePortfolioSummary(holdings);
+  const portfolio = calculatePortfolioSummary(safeHoldings);
 
   const handleSelectFromSearch = (stock: StockSearchResult) => {
     setSelectedStock(stock);
@@ -144,16 +145,16 @@ export const Stocks: React.FC = () => {
       {/* 持倉列表 Grid */}
       <div>
         <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
-          📈 持倉股票明細 ({holdings.length})
+          📈 持倉股票明細 ({safeHoldings.length})
         </h3>
 
         <div className="grid-2">
-          {holdings.map((h) => (
+          {safeHoldings.map((h) => (
             <StockCard key={h.id} holding={h} onTrade={handleTradeHolding} />
           ))}
         </div>
 
-        {holdings.length === 0 && (
+        {safeHoldings.length === 0 && (
           <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
             目前尚無任何股票持倉記錄。點擊右上角「新增持股 / 買入」搜尋並記錄第一筆股票！
           </Card>

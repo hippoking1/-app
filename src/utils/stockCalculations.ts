@@ -18,7 +18,11 @@ export function calculateTWStockTax(amount: number, isETF = false): number {
 /**
  * 計算單檔股票持倉的損益與報酬率
  */
-export function calculateHoldingProfitLoss(holding: StockHolding) {
+export function calculateHoldingProfitLoss(holding: Partial<StockHolding> | null | undefined) {
+  if (!holding) {
+    return { totalCost: 0, marketValue: 0, profitLoss: 0, returnRate: 0, todayProfitLoss: 0 };
+  }
+
   const shares = holding.shares || 0;
   const avgCost = holding.avgCost || 0;
   const currentPrice = holding.currentPrice || avgCost;
@@ -44,12 +48,15 @@ export function calculateHoldingProfitLoss(holding: StockHolding) {
 /**
  * 計算整個股票投資組合的總資產狀況 (折合台幣)
  */
-export function calculatePortfolioSummary(holdings: StockHolding[], usdRate = 32.5) {
+export function calculatePortfolioSummary(holdings: StockHolding[] = [], usdRate = 32.5) {
   let totalCostTWD = 0;
   let totalMarketValueTWD = 0;
   let todayProfitLossTWD = 0;
 
-  holdings.forEach((h) => {
+  const safeList = Array.isArray(holdings) ? holdings : [];
+
+  safeList.forEach((h) => {
+    if (!h) return;
     const rate = h.market === 'US' || h.currency === 'USD' ? usdRate : 1;
     const pl = calculateHoldingProfitLoss(h);
 

@@ -71,33 +71,39 @@ export function useStockSearch() {
 /**
  * 自動更新所有持倉股票的最新報價並回寫 Firestore
  */
-export function useBatchUpdateHoldings(holdings: StockHolding[]) {
+export function useBatchUpdateHoldings(holdings: StockHolding[] = []) {
   const [isUpdating, setIsUpdating] = useState(false);
 
   const updateAllPrices = useCallback(async () => {
-    if (!holdings || holdings.length === 0 || isUpdating) return;
+    const safeHoldings = Array.isArray(holdings) ? holdings : [];
+    if (safeHoldings.length === 0 || isUpdating) return;
 
     setIsUpdating(true);
     try {
-      const queryItems = holdings.map((h) => ({
+      const queryItems = safeHoldings.map((h) => ({
         symbol: h.symbol,
-        market: h.market
+        market: h.market || 'TW'
       }));
 
       const batchQuotes = await fetchBatchStockQuotes(queryItems);
 
-      for (const holding of holdings) {
-        const quote = batchQuotes[holding.symbol.toUpperCase()];
-        if (quote && quote.currentPrice > 0) {
-          await saveStockHolding({
-            ...holding,
-            currentPrice: quote.currentPrice,
-            previousClose: quote.previousClose,
-            change: quote.change,
-            changePercent: quote.changePercent,
-            lastPriceUpdate: quote.updatedAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          });
+      if (batchQuotes && typeof batchQuotes === 'object') {
+        for (const holding of safeHoldings) {
+          const symKey = holding.symbol.toUpperCase();
+          const altKey = symKey.replace('.TW', '').replace('.TWO', '');
+          const quote = batchQuotes[symKey] || batchQuotes[altKey];
+
+          if (quote && quote.currentPrice > 0) {
+            await saveStockHolding({
+              ...holding,
+              currentPrice: quote.currentPrice,
+              previousClose: quote.previousClose || holding.previousClose,
+              change: quote.change || 0,
+              changePercent: quote.changePercent || 0,
+              lastPriceUpdate: quote.updatedAt || new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
         }
       }
     } catch (err) {
