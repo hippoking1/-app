@@ -1,7 +1,19 @@
 import { ParsedTransaction, StockQuote, StockSearchResult, StockMarket } from '@/types';
 
 // 從環境變數讀取 Google Apps Script Web App 部署 URL
-const GAS_URL = import.meta.env.VITE_GAS_DEPLOYMENT_URL || '';
+export const GAS_URL = import.meta.env.VITE_GAS_DEPLOYMENT_URL || '';
+
+export interface DiagnosticResult {
+  gasConnected: boolean;
+  gasUrl: string;
+  hasGeminiKey: boolean;
+  geminiModel: string;
+  latencyMs: number;
+  testStock2880?: StockQuote;
+  testStock2330?: StockQuote;
+  testAIResult?: ParsedTransaction[];
+  error?: string;
+}
 
 interface GASResponse<T> {
   success: boolean;
@@ -29,11 +41,17 @@ async function callGAS<T>(action: string, payload: Record<string, unknown> = {})
       body: JSON.stringify({ action, payload })
     });
 
-    if (!response.ok) {
-      throw new Error(`GAS API 伺服器錯誤: HTTP ${response.status}`);
+    const responseText = await response.text();
+
+    // 若 GAS 回傳 HTML 錯誤頁面（例如「找不到以下指令碼函式：doPost」）
+    if (responseText.startsWith('<!DOCTYPE html>') || responseText.startsWith('<html')) {
+      if (responseText.includes('doPost')) {
+        throw new Error('GAS 後端缺少 doPost 進入點！請確認已將最新 gas/Code.gs 貼入 Google Apps Script 並重新部署為新版本。');
+      }
+      throw new Error('GAS 回傳了 HTML 錯誤頁面，請確認 Web 應用程式「存取權」已設為「任何人 (Anyone)」');
     }
 
-    const result: GASResponse<T> = await response.json();
+    const result: GASResponse<T> = JSON.parse(responseText);
     if (!result.success && result.error) {
       throw new Error(result.error);
     }
@@ -47,7 +65,93 @@ async function callGAS<T>(action: string, payload: Record<string, unknown> = {})
 }
 
 /**
- * 1. AI 記帳：將自然語言解析為結構化交易清單
+ * 執行完整的 GAS & Gemini & Yahoo Finance 報價連線診斷
+ */
+export async function runSystemDiagnostics(): Promise<DiagnosticResult> {
+  const startTime = Date.now();
+  const result: DiagnosticResult = {
+    gasConnected: false,
+    gasUrl: GAS_URL,
+    hasGeminiKey: false,
+    geminiModel: 'gemini-3.7-flash',
+    latencyMs: 0
+  };
+
+  if (!GAS_URL) {
+    result.error = '尚未在 .env 設定 VITE_GAS_DEPLOYMENT_URL';
+    return result;
+  }
+
+  try {
+    // 1. 測試 POST 進入點
+    const pingRes = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: 'testConnection', payload: {} })
+    });
+
+    const pingText = await pingRes.text();
+    result.latencyMs = Date.now() - startTime;
+
+    if (pingText.includes('doPost')) {
+      result.error = 'GAS 找不到 doPost 函式！請將專案中的 gas/Code.gs 複製貼到 Google Apps Script 並點擊「部署 > 管理部署作業 > 編輯 > 建立新版本 > 部署」。';
+      return result;
+    }
+
+    if (pingText.startsWith('<!DOCTYPE html>')) {
+      result.error = 'GAS 回傳 HTML 頁面，請確認 GAS 部署設定中的「誰可以存取」設為「所有人 (Anyone)」。';
+      return result;
+    }
+
+    const pingJson = JSON.parse(pingText);
+    result.gasConnected = Boolean(pingJson.success);
+    result.hasGeminiKey = Boolean(pingJson.data?.isGeminiConfigured);
+
+    // 2. 測試 Yahoo Finance 報價 (2880 華南金)
+    try {
+      const quoteRes = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'getStockQuote', payload: { symbol: '2880.TW' } })
+      });
+      const quoteJson = await quoteRes.json();
+      if (quoteJson.success) {
+        result.testStock2880 = quoteJson.data;
+      }
+    } catch (e) {}
+
+    // 3. 測試 Gemini AI 記帳解析
+    if (result.hasGeminiKey) {
+      try {
+        const aiRes = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'parseExpense',
+            payload: {
+              text: '今天午餐在麥當勞刷卡吃了 180 元',
+              categories: [{ id: 'cat_1', name: '餐飲美食' }],
+              accounts: [{ id: 'acc_1', name: '信用卡' }]
+            }
+          })
+        });
+        const aiJson = await aiRes.json();
+        if (aiJson.success) {
+          result.testAIResult = aiJson.data;
+        }
+      } catch (e) {}
+    }
+
+    return result;
+  } catch (err: any) {
+    result.latencyMs = Date.now() - startTime;
+    result.error = err.message || '連線測試超時或失敗';
+    return result;
+  }
+}
+
+/**
+ * 1. AI 記帳：將自然語言解析為結構化交易清單 (Gemini 3.7 Flash)
  */
 export async function parseExpenseTextWithGemini(
   text: string,
@@ -64,14 +168,14 @@ export async function parseExpenseTextWithGemini(
 }
 
 /**
- * 2. 查詢單檔股票報價 (台股/美股)
+ * 2. 查詢單檔股票報價 (Yahoo Finance API)
  */
-export async function fetchStockQuote(symbol: string, market: StockMarket): Promise<StockQuote> {
+export async function fetchStockQuote(symbol: string, market: StockMarket = 'TW'): Promise<StockQuote> {
   return callGAS<StockQuote>('getStockQuote', { symbol, market });
 }
 
 /**
- * 3. 搜尋股票代碼或名稱
+ * 3. 搜尋股票代碼或名稱 (Yahoo Search API)
  */
 export async function searchStocks(keyword: string): Promise<StockSearchResult[]> {
   return callGAS<StockSearchResult[]>('searchStock', { keyword });
@@ -105,7 +209,6 @@ function mockGASResponse<T>(action: string, payload: Record<string, any>): Promi
         const text: string = payload.text || '';
         const today = payload.userDate || new Date().toISOString().split('T')[0];
         
-        // 簡易正則提取模擬
         const amountMatch = text.match(/\d+/);
         const amount = amountMatch ? parseInt(amountMatch[0], 10) : 100;
         
@@ -121,44 +224,43 @@ function mockGASResponse<T>(action: string, payload: Record<string, any>): Promi
           accountName: payload.accounts?.[0]?.name || '現金錢包',
           note: text.replace(/\d+/g, '').replace(/(元|塊|花了|支出|買)/g, '').trim() || text,
           date: today,
-          tags: ['AI自動解析'],
-          confidence: 0.92
+          tags: ['本機智慧模擬模式'],
+          confidence: 0.85
         };
         resolve([mockItem] as unknown as T);
       } else if (action === 'getStockQuote') {
-        const symbol: string = payload.symbol || '2330.TW';
-        const isTW = payload.market === 'TW' || symbol.includes('.TW');
+        const symbol: string = payload.symbol || '2880.TW';
+        const isTW = payload.market === 'TW' || symbol.includes('.TW') || symbol.includes('.TWO') || /^\d{4,6}$/.test(symbol);
+        const code = symbol.replace('.TW', '').replace('.TWO', '');
         const quote: StockQuote = {
           symbol: symbol,
-          code: symbol.replace('.TW', ''),
-          name: symbol.includes('2330') ? '台積電' : symbol.includes('AAPL') ? 'Apple Inc.' : symbol,
+          code: code,
+          name: code === '2880' ? '華南金' : code === '2330' ? '台積電' : code,
           market: isTW ? 'TW' : 'US',
+          stockType: '台股',
           currency: isTW ? 'TWD' : 'USD',
-          currentPrice: isTW ? 985 : 225.5,
-          previousClose: isTW ? 970 : 222.0,
-          change: isTW ? 15 : 3.5,
-          changePercent: isTW ? 1.55 : 1.58,
+          currentPrice: code === '2880' ? 25.4 : code === '2330' ? 985 : 100,
+          previousClose: code === '2880' ? 25.2 : code === '2330' ? 970 : 98,
+          change: 0.2,
+          changePercent: 0.79,
           updatedAt: new Date().toISOString()
         };
         resolve(quote as unknown as T);
       } else if (action === 'searchStock') {
         const kw: string = (payload.keyword || '').toUpperCase();
         const mockList: StockSearchResult[] = [
-          { symbol: '2330.TW', code: '2330', name: '台積電', market: 'TW' as StockMarket, currency: 'TWD', price: 985 },
-          { symbol: '2454.TW', code: '2454', name: '聯發科', market: 'TW' as StockMarket, currency: 'TWD', price: 1320 },
-          { symbol: '0050.TW', code: '0050', name: '元大台灣50', market: 'TW' as StockMarket, currency: 'TWD', price: 185 },
-          { symbol: 'AAPL', code: 'AAPL', name: 'Apple Inc.', market: 'US' as StockMarket, currency: 'USD', price: 225.5 },
-          { symbol: 'NVDA', code: 'NVDA', name: 'NVIDIA Corp', market: 'US' as StockMarket, currency: 'USD', price: 128.0 },
-          { symbol: 'TSLA', code: 'TSLA', name: 'Tesla Inc', market: 'US' as StockMarket, currency: 'USD', price: 215.0 }
+          { symbol: '2880.TW', code: '2880', name: '華南金', market: 'TW' as StockMarket, stockType: '上市', currency: 'TWD', price: 25.4 },
+          { symbol: '2330.TW', code: '2330', name: '台積電', market: 'TW' as StockMarket, stockType: '上市', currency: 'TWD', price: 985 },
+          { symbol: '7829.TWO', code: '7829', name: '全景軟體', market: 'TW' as StockMarket, stockType: '上櫃/興櫃', currency: 'TWD', price: 112 },
+          { symbol: '2454.TW', code: '2454', name: '聯發科', market: 'TW' as StockMarket, stockType: '上市', currency: 'TWD', price: 1320 },
+          { symbol: '0050.TW', code: '0050', name: '元大台灣50', market: 'TW' as StockMarket, stockType: '上市', currency: 'TWD', price: 185 },
+          { symbol: 'AAPL', code: 'AAPL', name: 'Apple Inc.', market: 'US' as StockMarket, stockType: '美股', currency: 'USD', price: 225.5 },
+          { symbol: 'NVDA', code: 'NVDA', name: 'NVIDIA Corp', market: 'US' as StockMarket, stockType: '美股', currency: 'USD', price: 128.0 }
         ].filter(s => s.code.includes(kw) || s.name.includes(kw));
         resolve(mockList as unknown as T);
-      } else if (action === 'getSpendingInsights') {
-        resolve({
-          insights: `💡 **本期財務健康度簡評**\n整體收支比例維持在健康水準（儲蓄率約 35%）。\n\n⚠️ **需關注的花費項目**\n餐飲與外食支出佔總支出達 45%，接近預算警戒線。\n\n🎯 **財務優化建議**\n1. 可設定每日餐飲額度上限為 $450 元以防超支。\n2. 股票投資收益穩定，可持續定期定額分散風險。`
-        } as unknown as T);
       } else {
         resolve({} as unknown as T);
       }
-    }, 400);
+    }, 300);
   });
 }
