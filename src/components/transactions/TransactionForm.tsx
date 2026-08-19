@@ -78,8 +78,6 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       const tags = tagInput
         .split(',')
         .map((t) => t.trim())
-        .filter(Boolean);
-
       const transaction: Transaction = {
         id: initialData?.id || 'tx_' + uuidv4().slice(0, 10),
         userId: user.uid,
@@ -88,12 +86,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         type,
         amount: parsedAmount,
         note: note.trim(),
-        tags,
+        tags: tags.length > 0 ? tags : [],
         date,
-        transferToAccountId: type === 'transfer' ? transferToAccountId : undefined,
         createdAt: initialData?.createdAt || now,
         updatedAt: now
       };
+
+      if (type === 'transfer' && transferToAccountId) {
+        transaction.transferToAccountId = transferToAccountId;
+      }
 
       await addTransaction(transaction);
       addToast({ type: 'success', message: '記帳已儲存！' });

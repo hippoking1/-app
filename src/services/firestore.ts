@@ -36,6 +36,23 @@ class LocalStore {
   }
 }
 
+/**
+ * 徹底移除物件中的 undefined 屬性，防止 Firestore 拋出 Unsupported field value: undefined
+ */
+function cleanUndefined<T extends Record<string, any>>(obj: T): T {
+  const result: any = {};
+  Object.keys(obj).forEach((key) => {
+    if (obj[key] !== undefined) {
+      if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+        result[key] = cleanUndefined(obj[key]);
+      } else {
+        result[key] = obj[key];
+      }
+    }
+  });
+  return result;
+}
+
 // 記憶體初始化鎖，防止同一 Client Session 重複觸發種子寫入
 const initializedUserMap = new Set<string>();
 
@@ -68,12 +85,12 @@ export async function initializeUserData(userId: string): Promise<void> {
       
       accounts.forEach(acc => {
         const ref = doc(db, 'users', userId, 'accounts', acc.id);
-        batch.set(ref, acc, { merge: true });
+        batch.set(ref, cleanUndefined(acc), { merge: true });
       });
 
       categories.forEach(cat => {
         const ref = doc(db, 'users', userId, 'categories', cat.id);
-        batch.set(ref, cat, { merge: true });
+        batch.set(ref, cleanUndefined(cat), { merge: true });
       });
 
       await batch.commit();
@@ -152,7 +169,7 @@ export async function saveAccount(account: Account): Promise<void> {
   }
 
   const ref = doc(db, 'users', account.userId, 'accounts', account.id);
-  await setDoc(ref, account, { merge: true });
+  await setDoc(ref, cleanUndefined(account), { merge: true });
 }
 
 export async function deleteAccount(userId: string, accountId: string): Promise<void> {
@@ -234,7 +251,7 @@ export async function saveCategory(category: Category): Promise<void> {
   }
 
   const ref = doc(db, 'users', category.userId, 'categories', category.id);
-  await setDoc(ref, category, { merge: true });
+  await setDoc(ref, cleanUndefined(category), { merge: true });
 }
 
 export async function deleteCategory(userId: string, categoryId: string): Promise<void> {
@@ -330,7 +347,7 @@ export async function addTransaction(transaction: Transaction): Promise<void> {
       }
     }
 
-    t.set(txDocRef, transaction);
+    t.set(txDocRef, cleanUndefined(transaction));
   });
 }
 
@@ -427,7 +444,7 @@ export async function saveBudget(budget: Budget): Promise<void> {
   }
 
   const ref = doc(db, 'users', budget.userId, 'budgets', budget.id);
-  await setDoc(ref, budget, { merge: true });
+  await setDoc(ref, cleanUndefined(budget), { merge: true });
 }
 
 export async function deleteBudget(userId: string, budgetId: string): Promise<void> {
@@ -479,7 +496,7 @@ export async function saveStockHolding(holding: StockHolding): Promise<void> {
   }
 
   const ref = doc(db, 'users', holding.userId, 'stockHoldings', holding.id);
-  await setDoc(ref, holding, { merge: true });
+  await setDoc(ref, cleanUndefined(holding), { merge: true });
 }
 
 export async function deleteStockHolding(userId: string, holdingId: string): Promise<void> {
