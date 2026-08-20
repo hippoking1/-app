@@ -160,6 +160,37 @@
 
 ---
 
+## 📱 Android 手機安裝指南
+
+本專案提供兩種在 Android 手機上使用的方式：
+
+### 方案 A：【最推薦】免安裝檔，透過 Chrome 秒速安裝為原生 App (PWA)
+1. 用手機上的 **Chrome 瀏覽器** 開啟已部署的網址：`https://<username>.github.io/<repo>/`
+2. 點擊瀏覽器右上角 **「三個點（選單）」** ➔ 選擇 **「安裝應用程式」** 或 **「新增至主螢幕」**。
+3. 手機桌面即會生成一個獨立的「智慧記帳」App 圖示，具備**全螢幕運行、無網址列、快取離線開啟及自動同步最新版**的極佳體驗！
+
+---
+
+### 方案 B：打包為實體 APK 安裝檔 (`.apk`)
+
+專案已原生整合 **Capacitor 8** 與 **GitHub Actions 自動編譯工作流**：
+
+#### 方法 1：由 GitHub Actions 免費自動下載 APK (免裝環境)
+1. 將程式碼 Push 至 GitHub 後，點擊 GitHub 專案上方的 **「Actions」** 頁籤。
+2. 點選 **「Build Android APK」** 執行紀錄。
+3. 在最下方的 **Artifacts (產物)** 區塊即可直接下載 **`SmartExpenseTracker-Debug-APK.zip`**，解壓縮後將 `app-debug.apk` 傳至手機即可安裝！
+
+#### 方法 2：本機使用 Android Studio 建置
+1. 確保電腦已安裝 [Android Studio](https://developer.android.com/studio)。
+2. 在專案根目錄執行同步並開啟 Android 專案：
+   ```bash
+   npm run cap:sync
+   npm run cap:open
+   ```
+3. 在 Android Studio 中點擊上方選單 **Build ➔ Build Bundle(s) / APK(s) ➔ Build APK(s)**，即可在 `android/app/build/outputs/apk/debug/` 取得 `.apk` 檔案。
+
+---
+
 ## ⚡ 內建連線診斷工具
 
 登入系統後，隨時可進入 **「系統設定」 ➔ 點擊「⚡ 立即進行完整診斷」**：
