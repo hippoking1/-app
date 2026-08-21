@@ -121,6 +121,35 @@ export const StockCard: React.FC<StockCardProps> = ({ holding, onTrade }) => {
         </div>
       </div>
 
+      {/* 🌟 年化與季化報酬率分析列 */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border)',
+          padding: '6px 10px',
+          borderRadius: 'var(--radius-sm)',
+          fontSize: '11px',
+          flexWrap: 'wrap',
+          gap: '4px'
+        }}
+      >
+        <span style={{ color: 'var(--text-muted)' }}>
+          📅 持有 {pl.daysHeld} 天
+        </span>
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <span style={{ color: pl.annualizedReturnRate >= 0 ? 'var(--income)' : 'var(--expense)', fontWeight: 700 }}>
+            🚀 年化: {pl.annualizedReturnRate >= 0 ? '+' : ''}{pl.annualizedReturnRate}%
+          </span>
+          <span style={{ color: pl.quarterlyReturnRate >= 0 ? 'var(--income)' : 'var(--expense)', fontWeight: 700 }}>
+            📊 季化: {pl.quarterlyReturnRate >= 0 ? '+' : ''}{pl.quarterlyReturnRate}%
+          </span>
+        </div>
+      </div>
+
       {/* 底部操作按鈕 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px' }}>
         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>

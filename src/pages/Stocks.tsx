@@ -108,15 +108,19 @@ export const Stocks: React.FC = () => {
             {portfolio.totalProfitLossTWD >= 0 ? '+' : ''}
             {formatCurrency(portfolio.totalProfitLossTWD)}
           </div>
-          <div
-            style={{
-              fontSize: '13px',
-              fontWeight: 700,
-              marginTop: '8px',
-              color: portfolio.totalReturnRate >= 0 ? 'var(--income)' : 'var(--expense)'
-            }}
-          >
-            總報酬率: {portfolio.totalReturnRate >= 0 ? '+' : ''}{portfolio.totalReturnRate}%
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>累積總報酬率：</span>
+              <strong style={{ color: portfolio.totalReturnRate >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                {portfolio.totalReturnRate >= 0 ? '+' : ''}{portfolio.totalReturnRate}%
+              </strong>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--text-muted)' }}>🚀 整體年化 / 季化：</span>
+              <span style={{ fontWeight: 700, color: portfolio.totalAnnualizedReturnRate >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                {portfolio.totalAnnualizedReturnRate >= 0 ? '+' : ''}{portfolio.totalAnnualizedReturnRate}% / {portfolio.totalQuarterlyReturnRate >= 0 ? '+' : ''}{portfolio.totalQuarterlyReturnRate}%
+              </span>
+            </div>
           </div>
         </Card>
 
@@ -136,8 +140,9 @@ export const Stocks: React.FC = () => {
             {portfolio.todayProfitLossTWD >= 0 ? '+' : ''}
             {formatCurrency(portfolio.todayProfitLossTWD)}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-            持有股票檔數: {holdings.length} 檔
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>持有檔數: {safeHoldings.length} 檔</span>
+            <span>加權持有: {portfolio.weightedDaysHeld} 天</span>
           </div>
         </Card>
       </div>
