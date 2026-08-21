@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { calculateTWStockFee, calculateTWStockTax } from '@/utils/stockCalculations';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
-import { Wallet, ArrowDownRight, ArrowUpRight, CheckSquare, Square } from 'lucide-react';
+import { Wallet, ArrowDownRight, ArrowUpRight, CheckSquare, Square, RotateCcw } from 'lucide-react';
 
 type FormMode = 'init' | 'buy' | 'sell';
 
@@ -63,6 +63,12 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
   const [includeFeeTax, setIncludeFeeTax] = useState<boolean>(true);
   const [loading, setLoading] = useState(false);
 
+  // 🌟 自訂手續費與證交稅
+  const [feeInput, setFeeInput] = useState<string>('');
+  const [taxInput, setTaxInput] = useState<string>('');
+  const [isFeeUserEdited, setIsFeeUserEdited] = useState<boolean>(false);
+  const [isTaxUserEdited, setIsTaxUserEdited] = useState<boolean>(false);
+
   // 預設選擇第一個帳戶
   useEffect(() => {
     if (!selectedAccountId && accounts.length > 0) {
@@ -85,20 +91,37 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
   const grossAmount = numShares * numPrice;
   const usdRate = 32.5;
 
-  // 手續費與證交稅
+  // 預估手續費與證交稅基準
   const grossTWD = market === 'US' ? grossAmount * usdRate : grossAmount;
-  const autoFee = market === 'TW' ? calculateTWStockFee(grossAmount) : 0;
-  const autoTax = market === 'TW' && mode === 'sell' ? calculateTWStockTax(grossAmount) : 0;
+  const defaultAutoFee = market === 'TW' ? calculateTWStockFee(grossAmount) : 0;
+  const defaultAutoTax = market === 'TW' && mode === 'sell' ? calculateTWStockTax(grossAmount) : 0;
+
+  // 當股數、價格或模式變更時，若使用者未手動覆蓋，則自動帶入預估值
+  useEffect(() => {
+    if (!isFeeUserEdited) {
+      setFeeInput(defaultAutoFee > 0 ? String(defaultAutoFee) : '0');
+    }
+  }, [defaultAutoFee, isFeeUserEdited]);
+
+  useEffect(() => {
+    if (!isTaxUserEdited) {
+      setTaxInput(defaultAutoTax > 0 ? String(defaultAutoTax) : '0');
+    }
+  }, [defaultAutoTax, isTaxUserEdited]);
+
+  // 使用者實際填寫的自訂金額
+  const finalFee = parseFloat(feeInput) || 0;
+  const finalTax = parseFloat(taxInput) || 0;
 
   // 連動記帳之實際金額
   let netTxAmountTWD = 0;
   if (mode === 'sell') {
-    // 賣出入帳 = 總額 - (手續費 + 稅)
-    const net = includeFeeTax ? grossTWD - autoFee - autoTax : grossTWD;
+    // 賣出入帳 = 總額 - (自訂手續費 + 自訂稅)
+    const net = includeFeeTax ? grossTWD - finalFee - finalTax : grossTWD;
     netTxAmountTWD = Math.max(0, Math.round(net));
   } else {
-    // 買進/建倉扣款 = 總額 + 手續費
-    const net = includeFeeTax ? grossTWD + autoFee : grossTWD;
+    // 買進/建倉扣款 = 總額 + 自訂手續費
+    const net = includeFeeTax ? grossTWD + finalFee : grossTWD;
     netTxAmountTWD = Math.max(0, Math.round(net));
   }
 
@@ -175,9 +198,13 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
         const actionLabel = mode === 'init' ? '初始建倉' : mode === 'buy' ? '買進加碼' : '賣出減碼';
         const currPrefix = market === 'US' ? 'US$' : '$';
         
+        const feeTaxDetail = includeFeeTax
+          ? `(手續費$${finalFee}${mode === 'sell' ? `, 證交稅$${finalTax}` : ''})`
+          : '';
+
         const autoNote = note.trim()
-          ? `${actionLabel} ${holding.name} (${holding.code}) ${numShares}股 @ ${currPrefix}${numPrice} - ${note.trim()}`
-          : `${actionLabel} ${holding.name} (${holding.code}) ${numShares}股 @ ${currPrefix}${numPrice}`;
+          ? `${actionLabel} ${holding.name} (${holding.code}) ${numShares}股 @ ${currPrefix}${numPrice} ${feeTaxDetail} - ${note.trim()}`
+          : `${actionLabel} ${holding.name} (${holding.code}) ${numShares}股 @ ${currPrefix}${numPrice} ${feeTaxDetail}`;
 
         const transaction: Transaction = {
           id: 'tx_stock_' + uuidv4().slice(0, 10),
@@ -186,7 +213,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
           categoryId: matchedCategory?.id || '',
           type: txType,
           amount: netTxAmountTWD,
-          note: autoNote,
+          note: autoNote.trim(),
           tags: ['股票投資', holding.name, actionLabel],
           date: date,
           createdAt: now,
@@ -245,7 +272,10 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
               <button
                 key={m}
                 type="button"
-                onClick={() => setMode(m)}
+                onClick={() => {
+                  setMode(m);
+                  setIsTaxUserEdited(false);
+                }}
                 style={{
                   flex: 1,
                   padding: '8px 0',
@@ -329,37 +359,108 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
         />
       )}
 
-      {/* 交易試算卡片 */}
+      {/* 🌟 核心新功能：可自行修改之手續費與證交稅區塊 */}
       <div
         style={{
           backgroundColor: 'var(--bg-tertiary)',
           padding: '12px 14px',
           borderRadius: 'var(--radius-md)',
-          fontSize: '12px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '6px'
+          gap: '10px'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-          <span>{mode === 'sell' ? '預估賣出總值：' : '買進持股總成本：'}</span>
-          <strong style={{ color: 'var(--text-primary)', fontSize: '14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+          <span>{mode === 'sell' ? '交易總面額：' : '持股總成本：'}</span>
+          <strong style={{ color: 'var(--text-primary)', fontSize: '15px' }}>
             {market === 'TW' ? '$' : 'US$'}
             {Math.round(grossAmount).toLocaleString()}
           </strong>
         </div>
 
-        {market === 'TW' && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-            <span>預估手續費 (0.1425%) / 證交稅 (0.3%)：</span>
-            <span>
-              ${autoFee} / ${autoTax}
-            </span>
+        {/* 手續費與證交稅自訂輸入框 */}
+        <div style={{ display: 'grid', gridTemplateColumns: mode === 'sell' && market === 'TW' ? '1fr 1fr' : '1fr', gap: '10px' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                證券手續費 (NT$)
+              </label>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsFeeUserEdited(false);
+                  setFeeInput(String(defaultAutoFee));
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--primary-light)',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  padding: 0
+                }}
+              >
+                <RotateCcw size={11} /> 帶入預估 (${defaultAutoFee})
+              </button>
+            </div>
+            <Input
+              type="number"
+              step="any"
+              value={feeInput}
+              onChange={(e) => {
+                setIsFeeUserEdited(true);
+                setFeeInput(e.target.value);
+              }}
+              placeholder="0"
+            />
           </div>
-        )}
+
+          {mode === 'sell' && market === 'TW' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  證券交易稅 (NT$)
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTaxUserEdited(false);
+                    setTaxInput(String(defaultAutoTax));
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary-light)',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '2px',
+                    padding: 0
+                  }}
+                >
+                  <RotateCcw size={11} /> 帶入預估 (${defaultAutoTax})
+                </button>
+              </div>
+              <Input
+                type="number"
+                step="any"
+                value={taxInput}
+                onChange={(e) => {
+                  setIsTaxUserEdited(true);
+                  setTaxInput(e.target.value);
+                }}
+                placeholder="0"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 🌟 核心新功能：帳戶收支同步連動設定區塊 */}
+      {/* 帳戶收支同步連動設定區塊 */}
       <div
         style={{
           backgroundColor: 'var(--bg-secondary)',
@@ -388,7 +489,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
             <span>同步將金額記錄到指定帳戶 ({mode === 'sell' ? '入帳' : '扣款'})</span>
           </label>
 
-          {market === 'TW' && syncToAccount && (
+          {syncToAccount && (
             <label
               onClick={() => setIncludeFeeTax(!includeFeeTax)}
               style={{
@@ -401,7 +502,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
               }}
             >
               {includeFeeTax ? <CheckSquare size={14} color="var(--income)" /> : <Square size={14} />}
-              <span>含手續費/稅</span>
+              <span>併計手續費/稅</span>
             </label>
           )}
         </div>
@@ -436,7 +537,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
                 {mode === 'sell' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                 <span>
                   將向「{selectedAcc.name}」{mode === 'sell' ? '入帳增加' : '支出扣除'} NT${netTxAmountTWD.toLocaleString()}
-                  {mode === 'sell' ? '（實收金額）' : '（總支付額）'}
+                  {includeFeeTax ? ` (已含手續費$${finalFee}${mode === 'sell' ? `與稅$${finalTax}` : ''})` : ' (未併計手續費/稅)'}
                 </span>
               </div>
             )}
