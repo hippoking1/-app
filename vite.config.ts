@@ -12,6 +12,7 @@ export default defineConfig({
       registerType: 'prompt',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 放寬快取上限至 5MB
         cleanupOutdatedCaches: true
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
@@ -42,6 +43,19 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
+    }
+  },
+  build: {
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', 'zustand'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'vendor-charts': ['recharts'],
+          'vendor-icons': ['lucide-react']
+        }
+      }
     }
   },
   server: {

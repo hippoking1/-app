@@ -174,7 +174,7 @@ export const StockCard: React.FC<StockCardProps> = ({ holding, onTrade }) => {
               fontWeight: 600
             }}
           >
-            <PlusCircle size={14} /> 加碼/調整
+            <PlusCircle size={14} /> 交易 / 除權息
           </button>
 
           <button

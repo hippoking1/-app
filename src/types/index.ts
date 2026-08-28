@@ -15,7 +15,7 @@ export type BudgetPeriod = 'monthly' | 'weekly' | 'yearly';
 export type StockMarket = 'TW' | 'US';
 
 // 股票交易類型
-export type StockTradeType = 'buy' | 'sell' | 'dividend';
+export type StockTradeType = 'buy' | 'sell' | 'dividend_cash' | 'dividend_stock' | 'init';
 
 /**
  * 帳戶介面
