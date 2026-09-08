@@ -21,6 +21,82 @@ import { Sparkles, PieChart as PieIcon, BarChart3, Loader2 } from 'lucide-react'
 
 const COLORS = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#0ea5e9', '#a855f7', '#ec4899', '#64748b'];
 
+// 圓餅圖懸浮提示 Tooltip (解決 Recharts 預設文字顏色太暗看不到的問題)
+const PieCustomTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const data = payload[0];
+  const { name, amount, percentage } = data.payload || {};
+  const fill = data.payload?.fill || data.color || 'var(--primary)';
+
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border-glass)',
+        borderRadius: '10px',
+        padding: '10px 14px',
+        boxShadow: 'var(--shadow-lg)',
+        backdropFilter: 'blur(16px)',
+        color: 'var(--text-primary)'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <span
+          style={{
+            width: '10px',
+            height: '10px',
+            borderRadius: '50%',
+            backgroundColor: fill,
+            flexShrink: 0
+          }}
+        />
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          {name}
+        </span>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '18px' }}>
+        <span className="font-mono" style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          {formatCurrency(Number(amount ?? data.value) || 0)}
+        </span>
+        {percentage !== undefined && (
+          <span style={{ fontSize: '12px', color: 'var(--primary-light)', fontWeight: 600 }}>
+            {percentage}%
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// 每日花費柱狀圖 Tooltip
+const BarCustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const value = payload[0]?.value || 0;
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--bg-secondary)',
+        border: '1px solid var(--border-glass)',
+        borderRadius: '10px',
+        padding: '10px 14px',
+        boxShadow: 'var(--shadow-lg)',
+        backdropFilter: 'blur(16px)',
+        color: 'var(--text-primary)'
+      }}
+    >
+      <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600 }}>
+        {label}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+        <span style={{ color: 'var(--text-secondary)' }}>支出：</span>
+        <span className="font-mono" style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
+          {formatCurrency(Number(value) || 0)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 export const Analytics: React.FC = () => {
   const { currentMonth } = useAppStore();
   const { transactions } = useTransactions();
@@ -105,7 +181,27 @@ export const Analytics: React.FC = () => {
           <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: 'var(--space-2)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <PieIcon size={18} color="var(--purple)" /> 本月支出分類佔比
           </h3>
-          <div style={{ width: '100%', height: '240px' }}>
+          <div style={{ width: '100%', height: '240px', position: 'relative' }}>
+            {expenseBreakdown.items.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                  pointerEvents: 'none'
+                }}
+              >
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>本月總支出</div>
+                <div
+                  className="font-mono"
+                  style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', marginTop: '2px' }}
+                >
+                  {formatCurrency(expenseBreakdown.totalAmount)}
+                </div>
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -119,13 +215,10 @@ export const Analytics: React.FC = () => {
                   paddingAngle={3}
                 >
                   {expenseBreakdown.items.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                  formatter={(val: any) => formatCurrency(Number(val) || 0)}
-                />
+                <Tooltip content={<PieCustomTooltip />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -152,7 +245,7 @@ export const Analytics: React.FC = () => {
                     style={{
                       width: `${item.percentage}%`,
                       height: '100%',
-                      backgroundColor: COLORS[index % COLORS.length],
+                      backgroundColor: item.color || COLORS[index % COLORS.length],
                       borderRadius: 'var(--radius-full)'
                     }}
                   />
@@ -179,10 +272,7 @@ export const Analytics: React.FC = () => {
             <BarChart data={dailyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <XAxis dataKey="day" stroke="var(--text-muted)" fontSize={11} interval={2} />
               <YAxis stroke="var(--text-muted)" fontSize={12} />
-              <Tooltip
-                contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                formatter={(val: any) => formatCurrency(Number(val) || 0)}
-              />
+              <Tooltip content={<BarCustomTooltip />} />
               <Bar dataKey="amount" name="花費" fill="var(--primary)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
