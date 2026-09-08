@@ -1,9 +1,163 @@
 import { Transaction, Category } from '@/types';
-import { format, subMonths, parseISO, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, addMonths, parseISO, startOfMonth, endOfMonth } from 'date-fns';
 
 function getMonthKey(dateStr?: string): string {
   if (!dateStr) return '';
   return dateStr.slice(0, 7).replace('/', '-');
+}
+
+export type TimeRangePreset = '3m' | '6m' | '12m' | 'ytd' | 'custom';
+
+export interface CategoryTrendItem {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+  total: number;
+}
+
+export interface CategoryTrendMonthData {
+  month: string;
+  fullMonth: string;
+  totalExpense: number;
+  [categoryId: string]: string | number;
+}
+
+const DEFAULT_CHART_COLORS = [
+  '#f43f5e', '#0ea5e9', '#ec4899', '#8b5cf6', '#10b981',
+  '#f59e0b', '#6366f1', '#14b8a6', '#f97316', '#64748b'
+];
+
+/**
+ * 取得指定區間的月份清單 (由舊至新，格式 YYYY-MM)
+ */
+export function getMonthsInRange(
+  preset: TimeRangePreset,
+  customStart?: string,
+  customEnd?: string
+): string[] {
+  const now = new Date();
+  if (preset === 'custom' && customStart && customEnd) {
+    let start = customStart;
+    let end = customEnd;
+    if (start > end) {
+      const temp = start;
+      start = end;
+      end = temp;
+    }
+    const result: string[] = [];
+    let cur = parseISO(`${start}-01`);
+    const endDate = parseISO(`${end}-01`);
+    let count = 0;
+    while (cur <= endDate && count < 60) {
+      result.push(format(cur, 'yyyy-MM'));
+      cur = addMonths(cur, 1);
+      count++;
+    }
+    return result.length > 0 ? result : [format(now, 'yyyy-MM')];
+  }
+
+  let monthsCount = 6;
+  if (preset === '3m') monthsCount = 3;
+  else if (preset === '6m') monthsCount = 6;
+  else if (preset === '12m') monthsCount = 12;
+  else if (preset === 'ytd') {
+    monthsCount = Math.max(1, now.getMonth() + 1);
+  }
+
+  const months: string[] = [];
+  for (let i = monthsCount - 1; i >= 0; i--) {
+    months.push(format(subMonths(now, i), 'yyyy-MM'));
+  }
+  return months;
+}
+
+/**
+ * 取得指定月份範圍內各支出分類的月度趨勢數據
+ */
+export function getCategoryMonthlyTrends(
+  transactions: Transaction[] = [],
+  categories: Category[] = [],
+  months: string[] = []
+): {
+  chartData: CategoryTrendMonthData[];
+  activeCategories: CategoryTrendItem[];
+} {
+  const safeList = transactions || [];
+  const monthSet = new Set(months);
+
+  // 1. 建立分類快速查找 Map
+  const categoryMap = new Map<string, Category>();
+  (categories || []).forEach((c) => {
+    if (c && c.id) categoryMap.set(c.id, c);
+  });
+
+  // 2. 篩選出時間區間內的所有支出記錄
+  const expenseTxs = safeList.filter(
+    (t) => t && t.type === 'expense' && t.date && monthSet.has(getMonthKey(t.date))
+  );
+
+  // 3. 統計每個分類在整個區間內的累計支出，以排序重要度
+  const catTotalMap = new Map<string, number>();
+  expenseTxs.forEach((t) => {
+    const catId = t.categoryId || 'unknown';
+    catTotalMap.set(catId, (catTotalMap.get(catId) || 0) + (Number(t.amount) || 0));
+  });
+
+  const activeCategories: CategoryTrendItem[] = Array.from(catTotalMap.entries())
+    .map(([catId, total], index) => {
+      const cat = categoryMap.get(catId);
+      return {
+        id: catId,
+        name: cat?.name || '其他支出',
+        color: cat?.color || DEFAULT_CHART_COLORS[index % DEFAULT_CHART_COLORS.length],
+        icon: cat?.icon,
+        total
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  // 4. 判斷是否跨年份，以便決定 X 軸標籤格式
+  const years = new Set(months.map((m) => m.slice(0, 4)));
+  const isMultiYear = years.size > 1;
+
+  // 5. 組合每月各分類支出數據
+  const chartData: CategoryTrendMonthData[] = months.map((month) => {
+    const monthTxs = expenseTxs.filter((t) => getMonthKey(t.date) === month);
+    let totalExpense = 0;
+    const catSpend: Record<string, number> = {};
+
+    activeCategories.forEach((cat) => {
+      catSpend[cat.id] = 0;
+    });
+
+    monthTxs.forEach((t) => {
+      const catId = t.categoryId || 'unknown';
+      const amt = Number(t.amount) || 0;
+      totalExpense += amt;
+      catSpend[catId] = (catSpend[catId] || 0) + amt;
+    });
+
+    let displayMonth = month;
+    try {
+      const d = parseISO(`${month}-01`);
+      displayMonth = isMultiYear ? format(d, 'yy/MM') : format(d, 'M月');
+    } catch (e) {
+      displayMonth = isMultiYear ? month : month.slice(5) + '月';
+    }
+
+    return {
+      month: displayMonth,
+      fullMonth: month,
+      totalExpense,
+      ...catSpend
+    };
+  });
+
+  return {
+    chartData,
+    activeCategories
+  };
 }
 
 /**

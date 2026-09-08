@@ -5,12 +5,9 @@ import { useTransactions, useCategories, useBudgets } from '@/hooks/useFirestore
 import { useAppStore } from '@/stores/appStore';
 import { getMonthlyTrends, getCategoryBreakdown, getDailySpending, formatCurrency } from '@/utils/analytics';
 import { fetchSpendingInsights } from '@/services/gas';
+import { CategoryTrendsChart } from '@/components/analytics/CategoryTrendsChart';
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
   PieChart,
   Pie,
   Cell,
@@ -18,10 +15,9 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
-  Legend
+  Tooltip
 } from 'recharts';
-import { Sparkles, TrendingUp, PieChart as PieIcon, BarChart3, Loader2 } from 'lucide-react';
+import { Sparkles, PieChart as PieIcon, BarChart3, Loader2 } from 'lucide-react';
 
 const COLORS = ['#6366f1', '#10b981', '#f43f5e', '#f59e0b', '#0ea5e9', '#a855f7', '#ec4899', '#64748b'];
 
@@ -99,37 +95,8 @@ export const Analytics: React.FC = () => {
         </Card>
       )}
 
-      {/* 1. 近半年收支趨勢圖 */}
-      <Card glass padding="lg">
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <TrendingUp size={18} color="var(--primary-light)" /> 近半年收支趨勢折線圖
-        </h3>
-        <div style={{ width: '100%', height: '280px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={monthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--income)" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="var(--income)" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--expense)" stopOpacity={0.4} />
-                  <stop offset="95%" stopColor="var(--expense)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={12} />
-              <YAxis stroke="var(--text-muted)" fontSize={12} />
-              <Tooltip
-                contentStyle={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border)', borderRadius: '8px' }}
-                formatter={(value: any) => formatCurrency(Number(value) || 0)}
-              />
-              <Legend />
-              <Area type="monotone" dataKey="income" name="收入" stroke="var(--income)" fillOpacity={1} fill="url(#incomeGrad)" strokeWidth={2} />
-              <Area type="monotone" dataKey="expense" name="支出" stroke="var(--expense)" fillOpacity={1} fill="url(#expenseGrad)" strokeWidth={2} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      {/* 1. 各類支出趨勢折線圖 (支援自訂區間與多分類篩選) */}
+      <CategoryTrendsChart transactions={transactions} categories={categories} />
 
       {/* 2. 本月分類佔比圓餅圖 + 排行榜 (雙欄 Grid) */}
       <div className="grid-2">
