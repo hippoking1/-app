@@ -4,18 +4,20 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { AccountForm } from '@/components/accounts/AccountForm';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
-import { useAccounts, useTotalNetWorth } from '@/hooks/useFirestore';
+import { useAccounts, useTotalNetWorth, useTransactions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { Account } from '@/types';
 import { formatCurrency } from '@/utils/analytics';
-import { deleteAccount } from '@/services/firestore';
-import { Plus, Edit3, Trash2, ArrowRightLeft } from 'lucide-react';
+import { deleteAccount, saveAccount } from '@/services/firestore';
+import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
+import { Plus, Edit3, Trash2, ArrowRightLeft, Calendar, Sparkles } from 'lucide-react';
 import { getSafeIcon } from '@/utils/iconHelper';
 
 export const Accounts: React.FC = () => {
   const { user, addToast } = useAppStore();
   const { accounts } = useAccounts();
   const { cashTotal } = useTotalNetWorth();
+  const { transactions } = useTransactions();
 
   const [isAccountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
@@ -119,11 +121,15 @@ export const Accounts: React.FC = () => {
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {acc.type === 'cash'
-                        ? '現金'
+                        ? acc.balance === 0
+                          ? '現金 • 純額度模式'
+                          : '現金'
                         : acc.type === 'credit_card'
-                        ? '信用卡'
+                        ? `信用卡 • 每月 ${acc.billingCycleDay || 10} 號結帳`
                         : acc.type === 'e_wallet'
                         ? '電子支付'
+                        : acc.type === 'investment'
+                        ? '證券投資戶'
                         : '銀行帳戶'}
                     </div>
                   </div>
@@ -133,12 +139,14 @@ export const Accounts: React.FC = () => {
                   <button
                     onClick={() => handleEdit(acc)}
                     style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+                    title="編輯帳戶"
                   >
                     <Edit3 size={15} />
                   </button>
                   <button
                     onClick={() => handleDelete(acc)}
                     style={{ background: 'transparent', border: 'none', color: 'var(--text-disabled)', cursor: 'pointer', padding: '4px' }}
+                    title="刪除帳戶"
                   >
                     <Trash2 size={15} />
                   </button>
@@ -147,43 +155,195 @@ export const Accounts: React.FC = () => {
 
               {/* 餘額與額度顯示 */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {acc.type === 'credit_card' ? '已刷卡未出帳 / 應繳' : '目前結餘'}
-                  </span>
-                  {acc.type === 'credit_card' && acc.creditLimit && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      額度 {formatCurrency(acc.creditLimit)}
-                    </span>
-                  )}
-                </div>
-                <div
-                  className="font-mono"
-                  style={{
-                    fontSize: '24px',
-                    fontWeight: 800,
-                    marginTop: '2px',
-                    color: acc.type === 'credit_card' ? 'var(--expense)' : acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)'
-                  }}
-                >
-                  {formatCurrency(acc.balance)}
-                </div>
-
-                {acc.type === 'credit_card' && acc.creditLimit && (
-                  <div style={{ marginTop: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                      <span>可用額度：{formatCurrency(Math.max(0, acc.creditLimit - Math.abs(acc.balance)))}</span>
-                      <span>已用 {((Math.abs(acc.balance) / acc.creditLimit) * 100).toFixed(1)}%</span>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                {/* 1. 信用卡視圖 */}
+                {acc.type === 'credit_card' && (() => {
+                  const cardUsage = calculateCreditCardUsage(acc, transactions);
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                          本期已刷未出帳（結帳日後歸零）
+                        </span>
+                        {acc.creditLimit && (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            額度 {formatCurrency(acc.creditLimit)}
+                          </span>
+                        )}
+                      </div>
                       <div
+                        className="font-mono"
                         style={{
-                          width: `${Math.min(100, (Math.abs(acc.balance) / acc.creditLimit) * 100)}%`,
-                          height: '100%',
-                          backgroundColor: (Math.abs(acc.balance) / acc.creditLimit) > 0.8 ? 'var(--expense)' : 'var(--warning)',
-                          borderRadius: 'var(--radius-full)'
+                          fontSize: '24px',
+                          fontWeight: 800,
+                          marginTop: '2px',
+                          color: 'var(--expense)'
                         }}
-                      />
+                      >
+                        {formatCurrency(cardUsage.usedAmount)}
+                      </div>
+
+                      {/* 結帳週期與天數提醒 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Calendar size={12} /> 本期 {cardUsage.cycleStartDate.slice(5)} ~ {cardUsage.cycleEndDate.slice(5)}
+                        </span>
+                        <span style={{ color: cardUsage.daysRemaining === 0 ? 'var(--expense)' : 'var(--primary-light)', fontWeight: 600 }}>
+                          {cardUsage.daysRemaining === 0 ? '今日結帳歸零' : `剩 ${cardUsage.daysRemaining} 天結帳`}
+                        </span>
+                      </div>
+
+                      {/* 額度進度條 */}
+                      {acc.creditLimit && (
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                            <span>可用額度：{formatCurrency(cardUsage.availableLimit)}</span>
+                            <span>已用 {cardUsage.usagePercent}%</span>
+                          </div>
+                          <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                            <div
+                              style={{
+                                width: `${Math.min(100, cardUsage.usagePercent)}%`,
+                                height: '100%',
+                                backgroundColor: cardUsage.usagePercent > 80 ? 'var(--expense)' : 'var(--warning)',
+                                borderRadius: 'var(--radius-full)',
+                                transition: 'width 0.3s'
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 2. 現金錢包視圖 */}
+                {acc.type === 'cash' && (() => {
+                  const cashUsage = calculateCashWalletUsage(acc, transactions);
+                  const isZeroMode = acc.balance === 0;
+
+                  if (isZeroMode) {
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--income)', fontWeight: 600 }}>
+                            💵 本月已使用額度
+                          </span>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            每月 1 號自動歸零
+                          </span>
+                        </div>
+                        <div
+                          className="font-mono"
+                          style={{
+                            fontSize: '24px',
+                            fontWeight: 800,
+                            marginTop: '2px',
+                            color: 'var(--text-primary)'
+                          }}
+                        >
+                          {formatCurrency(cashUsage.currentMonthSpent)}
+                        </div>
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            padding: '6px 10px',
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                            border: '1px solid rgba(16, 185, 129, 0.2)',
+                            fontSize: '11px',
+                            color: 'var(--income)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                        >
+                          <Sparkles size={12} /> 純額度模式：不扣減餘額，次月 1 號重新計算
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>目前結餘</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          本月已用 {formatCurrency(cashUsage.currentMonthSpent)}
+                        </span>
+                      </div>
+                      <div
+                        className="font-mono"
+                        style={{
+                          fontSize: '24px',
+                          fontWeight: 800,
+                          marginTop: '2px',
+                          color: acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)'
+                        }}
+                      >
+                        {formatCurrency(acc.balance)}
+                      </div>
+
+                      {/* 餘額為負數時的智慧修正提示 */}
+                      {acc.balance < 0 && (
+                        <div
+                          style={{
+                            marginTop: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '6px 8px',
+                            borderRadius: 'var(--radius-sm)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.25)',
+                            fontSize: '11px'
+                          }}
+                        >
+                          <span style={{ color: 'var(--expense)' }}>餘額為負數</span>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await saveAccount({ ...acc, balance: 0, updatedAt: new Date().toISOString() });
+                                addToast({ type: 'success', message: '已切換為純額度模式（餘額設為 0）' });
+                              } catch (err: any) {
+                                addToast({ type: 'error', message: '切換失敗: ' + err.message });
+                              }
+                            }}
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              color: '#ffffff',
+                              backgroundColor: 'var(--expense)',
+                              border: 'none',
+                              borderRadius: 'var(--radius-sm)',
+                              padding: '2px 8px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            設為 0 (啟用純額度模式)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+
+                {/* 3. 一般銀行/電子支付視圖 */}
+                {acc.type !== 'credit_card' && acc.type !== 'cash' && (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>目前結餘</span>
+                    </div>
+                    <div
+                      className="font-mono"
+                      style={{
+                        fontSize: '24px',
+                        fontWeight: 800,
+                        marginTop: '2px',
+                        color: acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)'
+                      }}
+                    >
+                      {formatCurrency(acc.balance)}
                     </div>
                   </div>
                 )}

@@ -185,10 +185,15 @@ export function useTotalNetWorth() {
   const { accounts } = useAccounts();
   const { holdings } = useStockHoldings();
 
-  // 現金與帳戶資產
+  // 現金與帳戶資產 (若為純額度模式或負餘額的現金錢包，不扣減淨資產)
   const cashTotal = accounts
     .filter((a) => !a.isArchived)
-    .reduce((sum, a) => sum + (a.balance || 0), 0);
+    .reduce((sum, a) => {
+      if (a.type === 'cash' && a.balance <= 0) {
+        return sum;
+      }
+      return sum + (a.balance || 0);
+    }, 0);
 
   // 股票市值 (台幣 1:1, 美元按 32.5 換算)
   const stockTotalTWD = holdings.reduce((sum, h) => {

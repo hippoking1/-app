@@ -29,6 +29,8 @@ export interface Account {
   color: string;
   balance: number;
   creditLimit?: number; // 信用卡總信用額度 (NT$)
+  billingCycleDay?: number; // 信用卡帳單結帳日 (每月 1 ~ 31 號)
+  usedAmountThisMonth?: number; // 現金錢包本月已用額度 (每月 1 號重新計算)
   currency: string;
   isArchived: boolean;
   sortOrder: number;

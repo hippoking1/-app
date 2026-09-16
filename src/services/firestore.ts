@@ -294,13 +294,16 @@ export async function addTransaction(transaction: Transaction): Promise<void> {
     txList.unshift(transaction);
     LocalStore.set('transactions_' + userId, txList);
 
-    // 更新帳戶餘額
+    // 更新帳戶餘額 (若現金錢包餘額為 0 則不扣減餘額，改為純記錄已用額度)
     const accList = LocalStore.get<Account[]>('accounts_' + userId, []);
     const sourceAcc = accList.find(a => a.id === accountId);
     if (sourceAcc) {
-      if (type === 'expense') sourceAcc.balance -= amount;
-      else if (type === 'income') sourceAcc.balance += amount;
-      else if (type === 'transfer') sourceAcc.balance -= amount;
+      const isCashZeroMode = sourceAcc.type === 'cash' && sourceAcc.balance === 0;
+      if (!isCashZeroMode) {
+        if (type === 'expense') sourceAcc.balance -= amount;
+        else if (type === 'income') sourceAcc.balance += amount;
+        else if (type === 'transfer') sourceAcc.balance -= amount;
+      }
     }
     if (type === 'transfer' && transferToAccountId) {
       const targetAcc = accList.find(a => a.id === transferToAccountId);
@@ -317,13 +320,18 @@ export async function addTransaction(transaction: Transaction): Promise<void> {
     const accDoc = await t.get(accDocRef);
 
     if (accDoc.exists()) {
-      const currentBalance = accDoc.data().balance || 0;
-      let newBalance = currentBalance;
-      if (type === 'expense') newBalance -= amount;
-      else if (type === 'income') newBalance += amount;
-      else if (type === 'transfer') newBalance -= amount;
+      const accData = accDoc.data();
+      const currentBalance = accData.balance || 0;
+      const isCashZeroMode = accData.type === 'cash' && currentBalance === 0;
 
-      t.update(accDocRef, { balance: newBalance, updatedAt: new Date().toISOString() });
+      if (!isCashZeroMode) {
+        let newBalance = currentBalance;
+        if (type === 'expense') newBalance -= amount;
+        else if (type === 'income') newBalance += amount;
+        else if (type === 'transfer') newBalance -= amount;
+
+        t.update(accDocRef, { balance: newBalance, updatedAt: new Date().toISOString() });
+      }
     }
 
     if (type === 'transfer' && transferToAccountId) {
@@ -355,9 +363,12 @@ export async function deleteTransaction(transaction: Transaction): Promise<void>
     const accList = LocalStore.get<Account[]>('accounts_' + userId, []);
     const sourceAcc = accList.find(a => a.id === accountId);
     if (sourceAcc) {
-      if (type === 'expense') sourceAcc.balance += amount;
-      else if (type === 'income') sourceAcc.balance -= amount;
-      else if (type === 'transfer') sourceAcc.balance += amount;
+      const isCashZeroMode = sourceAcc.type === 'cash' && sourceAcc.balance === 0;
+      if (!isCashZeroMode) {
+        if (type === 'expense') sourceAcc.balance += amount;
+        else if (type === 'income') sourceAcc.balance -= amount;
+        else if (type === 'transfer') sourceAcc.balance += amount;
+      }
     }
     if (type === 'transfer' && transferToAccountId) {
       const targetAcc = accList.find(a => a.id === transferToAccountId);
@@ -373,13 +384,18 @@ export async function deleteTransaction(transaction: Transaction): Promise<void>
     const accDoc = await t.get(accDocRef);
 
     if (accDoc.exists()) {
-      const cur = accDoc.data().balance || 0;
-      let reverted = cur;
-      if (type === 'expense') reverted += amount;
-      else if (type === 'income') reverted -= amount;
-      else if (type === 'transfer') reverted += amount;
+      const accData = accDoc.data();
+      const cur = accData.balance || 0;
+      const isCashZeroMode = accData.type === 'cash' && cur === 0;
 
-      t.update(accDocRef, { balance: reverted, updatedAt: new Date().toISOString() });
+      if (!isCashZeroMode) {
+        let reverted = cur;
+        if (type === 'expense') reverted += amount;
+        else if (type === 'income') reverted -= amount;
+        else if (type === 'transfer') reverted += amount;
+
+        t.update(accDocRef, { balance: reverted, updatedAt: new Date().toISOString() });
+      }
     }
 
     if (type === 'transfer' && transferToAccountId) {

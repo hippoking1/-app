@@ -57,6 +57,7 @@ export const DEFAULT_ACCOUNTS: Array<Omit<Account, 'userId' | 'createdAt' | 'upd
     color: '#f43f5e',
     balance: 0,
     creditLimit: 50000,
+    billingCycleDay: 10,
     currency: 'TWD',
     isArchived: false,
     sortOrder: 3

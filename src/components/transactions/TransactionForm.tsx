@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CategoryPicker } from './CategoryPicker';
 import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
+import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import { MapPin, Sparkles } from 'lucide-react';
@@ -329,10 +330,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           label={type === 'transfer' ? '轉出帳戶' : '帳戶'}
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          options={accounts.map((a) => ({
-            value: a.id,
-            label: `${a.name} ($${Math.round(a.balance).toLocaleString()})`
-          }))}
+          options={accounts.map((a) => {
+            let labelSuffix = `$${Math.round(a.balance).toLocaleString()}`;
+            if (a.type === 'cash' && a.balance === 0) {
+              const cashUsage = calculateCashWalletUsage(a, transactions);
+              labelSuffix = `純額度 / 本月已用 $${Math.round(cashUsage.currentMonthSpent).toLocaleString()}`;
+            } else if (a.type === 'credit_card') {
+              const cardUsage = calculateCreditCardUsage(a, transactions);
+              labelSuffix = `本期已用 $${Math.round(cardUsage.usedAmount).toLocaleString()}`;
+            }
+            return {
+              value: a.id,
+              label: `${a.name} (${labelSuffix})`
+            };
+          })}
         />
 
         {type === 'transfer' && (
@@ -344,10 +355,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               { value: '', label: '請選擇目標帳戶' },
               ...accounts
                 .filter((a) => a.id !== accountId)
-                .map((a) => ({
-                  value: a.id,
-                  label: `${a.name} ($${Math.round(a.balance).toLocaleString()})`
-                }))
+                .map((a) => {
+                  let labelSuffix = `$${Math.round(a.balance).toLocaleString()}`;
+                  if (a.type === 'cash' && a.balance === 0) {
+                    const cashUsage = calculateCashWalletUsage(a, transactions);
+                    labelSuffix = `純額度 / 本月已用 $${Math.round(cashUsage.currentMonthSpent).toLocaleString()}`;
+                  } else if (a.type === 'credit_card') {
+                    const cardUsage = calculateCreditCardUsage(a, transactions);
+                    labelSuffix = `本期已用 $${Math.round(cardUsage.usedAmount).toLocaleString()}`;
+                  }
+                  return {
+                    value: a.id,
+                    label: `${a.name} (${labelSuffix})`
+                  };
+                })
             ]}
           />
         )}

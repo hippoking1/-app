@@ -9,6 +9,7 @@ import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/analytics';
 import { calculateBudgetStatuses, getDailyAllowance } from '@/utils/budget';
 import { calculatePortfolioSummary } from '@/utils/stockCalculations';
+import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import {
   Sparkles,
   TrendingUp,
@@ -29,6 +30,7 @@ export const Dashboard: React.FC = () => {
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { transactions } = useTransactions({ month: currentMonth });
+  const { transactions: allTransactions } = useTransactions();
   const { budgets } = useBudgets();
   const { holdings } = useStockHoldings();
   const { totalNetWorth, cashTotal, stockTotalTWD } = useTotalNetWorth();
@@ -230,8 +232,30 @@ export const Dashboard: React.FC = () => {
         <div className="grid-3">
           {accounts.map((acc) => {
             const IconComponent = getSafeIcon(acc.icon, Icons.Building2);
+            let displayLabel = '';
+            let displayAmount = formatCurrency(acc.balance);
+            let amountColor = acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)';
+
+            if (acc.type === 'credit_card') {
+              const cardUsage = calculateCreditCardUsage(acc, allTransactions);
+              displayLabel = `本期已刷（結帳日 ${acc.billingCycleDay || 10} 號）`;
+              displayAmount = formatCurrency(cardUsage.usedAmount);
+              amountColor = 'var(--expense)';
+            } else if (acc.type === 'cash' && acc.balance === 0) {
+              const cashUsage = calculateCashWalletUsage(acc, allTransactions);
+              displayLabel = '本月已用（純額度模式）';
+              displayAmount = formatCurrency(cashUsage.currentMonthSpent);
+              amountColor = 'var(--income)';
+            }
+
             return (
-              <Card key={acc.id} interactive padding="md" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Card
+                key={acc.id}
+                interactive
+                padding="md"
+                onClick={() => navigate('/accounts')}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+              >
                 <div
                   style={{
                     width: '42px',
@@ -251,8 +275,13 @@ export const Dashboard: React.FC = () => {
                   <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {acc.name}
                   </div>
-                  <div className="font-mono" style={{ fontSize: '16px', fontWeight: 800, marginTop: '2px', color: acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)' }}>
-                    {formatCurrency(acc.balance)}
+                  {displayLabel && (
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                      {displayLabel}
+                    </div>
+                  )}
+                  <div className="font-mono" style={{ fontSize: '16px', fontWeight: 800, marginTop: '2px', color: amountColor }}>
+                    {displayAmount}
                   </div>
                 </div>
               </Card>
