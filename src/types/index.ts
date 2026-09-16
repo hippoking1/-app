@@ -62,6 +62,7 @@ export interface Transaction {
   categoryId: string;
   type: TransactionType;
   amount: number;
+  merchant?: string; // 地點或商家
   note: string;
   tags: string[];
   date: string; // YYYY-MM-DD
@@ -185,6 +186,7 @@ export interface ParsedTransaction {
   amount: number;
   categoryName: string;
   accountName?: string;
+  merchant?: string;
   note: string;
   date: string;
   tags?: string[];

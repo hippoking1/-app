@@ -7,7 +7,7 @@ import { BudgetForm } from '@/components/budget/BudgetForm';
 import { useBudgets, useTransactions, useCategories } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { Budget } from '@/types';
-import { calculateBudgetStatuses, getDailyAllowance } from '@/utils/budget';
+import { calculateBudgetStatuses, getDailyAllowance, isInvestmentTransaction } from '@/utils/budget';
 import { formatCurrency } from '@/utils/analytics';
 import { Target, Plus, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
 
@@ -22,14 +22,14 @@ export const BudgetPage: React.FC = () => {
 
   const budgetStatuses = calculateBudgetStatuses(budgets, transactions, categories, currentMonth);
 
-  // 總預算與總支出
+  // 總預算與總支出 (自動排除投資相關及股票買賣)
   const totalBudgetAmount = budgets
     .filter((b) => !b.categoryId)
     .reduce((sum, b) => sum + b.amount, 0) ||
     budgets.reduce((sum, b) => sum + b.amount, 0);
 
   const totalSpent = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => t.type === 'expense' && !isInvestmentTransaction(t, categories))
     .reduce((sum, t) => sum + t.amount, 0);
 
   const { dailyAllowance, remainingDays, remainingBudget } = getDailyAllowance(
@@ -72,9 +72,14 @@ export const BudgetPage: React.FC = () => {
       {/* 預算總體健康指標 */}
       <div className="grid-3">
         <Card glass padding="md">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-            當月總預算 vs 已支出
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+              當月總預算 vs 已支出
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--primary-light)', backgroundColor: 'rgba(99, 102, 241, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
+              不含投資理財
+            </span>
+          </div>
           <div className="font-mono" style={{ fontSize: '24px', fontWeight: 900, marginTop: '4px' }}>
             {formatCurrency(totalSpent)} / <span style={{ color: 'var(--text-muted)', fontSize: '18px' }}>{formatCurrency(totalBudgetAmount)}</span>
           </div>

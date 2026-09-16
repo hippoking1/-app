@@ -69,6 +69,13 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
     }
   };
 
+  const budgetableCategories = categories.filter((c) =>
+    !c.name.includes('投資') &&
+    !c.name.includes('股票') &&
+    !c.name.includes('理財') &&
+    c.id !== 'cat_expense_investment'
+  );
+
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       <Select
@@ -76,8 +83,8 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
         options={[
-          { value: 'all', label: '📊 全月總預算 (全部支出)' },
-          ...categories.map((c) => ({
+          { value: 'all', label: '📊 全月總預算 (日常支出，不含投資)' },
+          ...budgetableCategories.map((c) => ({
             value: c.id,
             label: `📁 ${c.name}`
           }))

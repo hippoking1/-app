@@ -42,12 +42,12 @@ export const Dashboard: React.FC = () => {
     .reduce((sum, t) => sum + t.amount, 0);
   const monthBalance = monthIncome - monthExpense;
 
-  // 預算狀態
+  // 預算狀態 (已自動排除投資與股票買賣)
   const budgetStatuses = calculateBudgetStatuses(budgets, transactions, categories, currentMonth);
   const globalBudget = budgetStatuses.find((b) => !b.budget.categoryId) || budgetStatuses[0];
   const { dailyAllowance, remainingDays } = getDailyAllowance(
     globalBudget ? globalBudget.budget.amount : 0,
-    monthExpense,
+    globalBudget ? globalBudget.spent : 0,
     currentMonth
   );
 

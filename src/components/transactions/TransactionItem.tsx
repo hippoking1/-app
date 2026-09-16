@@ -95,7 +95,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             >
               {isTransfer
                 ? `${account?.name || '帳戶'} ➔ ${targetAccount?.name || '目標帳戶'}`
-                : transaction.note || category?.name || '未分類支出'}
+                : transaction.merchant || transaction.note || category?.name || '未分類支出'}
             </span>
             {transaction.aiGenerated && (
               <span
@@ -131,6 +131,12 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
               <>
                 <span>•</span>
                 <span style={{ color: category.color }}>{category.name}</span>
+              </>
+            )}
+            {transaction.merchant && transaction.note && (
+              <>
+                <span>•</span>
+                <span style={{ color: 'var(--text-secondary)' }}>{transaction.note}</span>
               </>
             )}
           </div>

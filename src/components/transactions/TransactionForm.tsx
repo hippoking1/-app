@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Transaction, TransactionType } from '@/types';
-import { useAccounts, useCategories } from '@/hooks/useFirestore';
+import { useAccounts, useCategories, useTransactions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { addTransaction } from '@/services/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CategoryPicker } from './CategoryPicker';
+import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
+import { MapPin, Sparkles } from 'lucide-react';
 
 interface TransactionFormProps {
   initialData?: Partial<Transaction>;
@@ -24,6 +26,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const { user, addToast } = useAppStore();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const { transactions } = useTransactions();
 
   const [type, setType] = useState<TransactionType>(() => {
     return initialData?.type || (sessionStorage.getItem('draft_tx_type') as TransactionType) || 'expense';
@@ -31,6 +34,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [amount, setAmount] = useState<string>(() => {
     return initialData?.amount ? String(initialData.amount) : sessionStorage.getItem('draft_tx_amount') || '';
   });
+  const [merchant, setMerchant] = useState<string>(() => {
+    return initialData?.merchant || sessionStorage.getItem('draft_tx_merchant') || '';
+  });
+  const [appliedPattern, setAppliedPattern] = useState<MerchantPattern | null>(null);
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || accounts[0]?.id || '');
   const [transferToAccountId, setTransferToAccountId] = useState<string>(initialData?.transferToAccountId || '');
   const [categoryId, setCategoryId] = useState<string>(initialData?.categoryId || '');
@@ -40,6 +47,38 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   });
   const [tagInput, setTagInput] = useState<string>(initialData?.tags ? initialData.tags.join(', ') : '');
   const [loading, setLoading] = useState(false);
+
+  // 取得歷史常去商家清單
+  const uniqueMerchants = useMemo(() => getUniqueMerchants(transactions), [transactions]);
+
+  // 地點或商家輸入連動：自動推算並套用最常使用的消費模式
+  const handleMerchantChange = (val: string) => {
+    setMerchant(val);
+    sessionStorage.setItem('draft_tx_merchant', val);
+
+    if (val.trim().length >= 1) {
+      const pattern = getMerchantPattern(val, transactions, categories, accounts);
+      if (pattern) {
+        if (pattern.type && pattern.type !== type) {
+          setType(pattern.type);
+        }
+        if (pattern.categoryId) {
+          setCategoryId(pattern.categoryId);
+        }
+        if (pattern.accountId) {
+          setAccountId(pattern.accountId);
+        }
+        if (pattern.commonTag && !tagInput) {
+          setTagInput(pattern.commonTag);
+        }
+        setAppliedPattern(pattern);
+      } else {
+        setAppliedPattern(null);
+      }
+    } else {
+      setAppliedPattern(null);
+    }
+  };
 
   // 自動同步草稿至 sessionStorage
   const handleAmountChange = (val: string) => {
@@ -56,6 +95,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     sessionStorage.removeItem('draft_tx_amount');
     sessionStorage.removeItem('draft_tx_note');
     sessionStorage.removeItem('draft_tx_type');
+    sessionStorage.removeItem('draft_tx_merchant');
   };
 
   // 根據收支類型過濾分類
@@ -108,6 +148,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         categoryId: type === 'transfer' ? '' : categoryId,
         type,
         amount: parsedAmount,
+        merchant: merchant.trim() || undefined,
         note: note.trim(),
         tags: tags.length > 0 ? tags : [],
         date,
@@ -207,6 +248,79 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             }}
           />
         </div>
+      </div>
+
+      {/* 地點或商家 (輸入時自動套用最常使用之消費模式) */}
+      <div>
+        <Input
+          label="地點或商家"
+          placeholder="例如：麥當勞、7-ELEVEN、全聯、星巴克"
+          value={merchant}
+          onChange={(e) => handleMerchantChange(e.target.value)}
+          list="merchant-suggestions"
+          icon={<MapPin size={16} />}
+        />
+        <datalist id="merchant-suggestions">
+          {uniqueMerchants.map((m) => (
+            <option key={m.name} value={m.name} />
+          ))}
+        </datalist>
+
+        {/* 自動套用模式提示 */}
+        {appliedPattern && (
+          <div
+            style={{
+              marginTop: '6px',
+              padding: '6px 10px',
+              backgroundColor: 'rgba(99, 102, 241, 0.12)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12px',
+              color: 'var(--primary-light)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <Sparkles size={14} />
+            <span>
+              已自動套用<strong>「{appliedPattern.merchant}」</strong>常用模式：
+              {appliedPattern.categoryName && (
+                <span style={{ color: appliedPattern.categoryColor || 'inherit', fontWeight: 700 }}>
+                  {appliedPattern.categoryName}
+                </span>
+              )}
+              {appliedPattern.categoryName && appliedPattern.accountName && ' • '}
+              {appliedPattern.accountName && <span style={{ fontWeight: 600 }}>{appliedPattern.accountName}</span>}
+            </span>
+          </div>
+        )}
+
+        {/* 歷史常去商家快捷標籤 */}
+        {!merchant && uniqueMerchants.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>常去：</span>
+            {uniqueMerchants.slice(0, 5).map((m) => (
+              <button
+                key={m.name}
+                type="button"
+                onClick={() => handleMerchantChange(m.name)}
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                {m.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 帳戶選擇 */}

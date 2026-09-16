@@ -40,9 +40,10 @@ export const Transactions: React.FC = () => {
     if (selectedCategoryId !== 'all' && t.categoryId !== selectedCategoryId) return false;
     if (keyword.trim()) {
       const kw = keyword.toLowerCase();
+      const matchMerchant = t.merchant?.toLowerCase().includes(kw);
       const matchNote = t.note?.toLowerCase().includes(kw);
       const matchTag = t.tags?.some((tag) => tag.toLowerCase().includes(kw));
-      if (!matchNote && !matchTag) return false;
+      if (!matchMerchant && !matchNote && !matchTag) return false;
     }
     return true;
   });

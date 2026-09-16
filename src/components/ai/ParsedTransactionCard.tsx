@@ -44,6 +44,7 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
       categoryId,
       type,
       amount: parsedAmount,
+      merchant: transaction.merchant,
       note,
       tags: transaction.tags || ['AI智能記帳'],
       date,
