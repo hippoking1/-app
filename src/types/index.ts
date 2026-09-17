@@ -55,6 +55,17 @@ export interface Category {
 }
 
 /**
+ * 信用卡分期付款介面
+ */
+export interface InstallmentInfo {
+  groupId: string;        // 同一筆分期的群組唯一識別碼 (所有期數相同)
+  currentPeriod: number;  // 目前期數 (1-indexed，例如第 1 期)
+  totalPeriods: number;   // 總期數 (例如 3, 6, 12, 24 期)
+  totalAmount: number;    // 分期前原始總金額
+  periodAmount: number;   // 本期應繳金額
+}
+
+/**
  * 交易記錄介面
  */
 export interface Transaction {
@@ -70,6 +81,7 @@ export interface Transaction {
   date: string; // YYYY-MM-DD
   transferToAccountId?: string; // 轉帳目標帳戶
   aiGenerated?: string; // AI 產生的原始提示詞
+  installment?: InstallmentInfo; // 信用卡分期資訊
   createdAt: string;
   updatedAt: string;
 }

@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Transaction, TransactionType } from '@/types';
 import { useAccounts, useCategories, useTransactions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
-import { addTransaction } from '@/services/firestore';
+import { addTransaction, addInstallmentTransactions } from '@/services/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -10,8 +10,8 @@ import { CategoryPicker } from './CategoryPicker';
 import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import { v4 as uuidv4 } from 'uuid';
-import { format } from 'date-fns';
-import { MapPin, Sparkles } from 'lucide-react';
+import { format, addMonths, parseISO } from 'date-fns';
+import { MapPin, Sparkles, CreditCard, Layers } from 'lucide-react';
 
 interface TransactionFormProps {
   initialData?: Partial<Transaction>;
@@ -48,6 +48,30 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   });
   const [tagInput, setTagInput] = useState<string>(initialData?.tags ? initialData.tags.join(', ') : '');
   const [loading, setLoading] = useState(false);
+
+  // 信用卡分期付款狀態
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentPeriods, setInstallmentPeriods] = useState(3);
+  const [isCustomPeriods, setIsCustomPeriods] = useState(false);
+
+  // 判斷選中帳戶是否為信用卡且為支出模式
+  const selectedAccount = useMemo(() => accounts.find((a) => a.id === accountId), [accounts, accountId]);
+  const isCreditCard = selectedAccount?.type === 'credit_card';
+  const canUseInstallment = type === 'expense' && isCreditCard;
+
+  // 分期試算數據
+  const parsedAmount = parseFloat(amount) || 0;
+  const activePeriods = Math.max(2, Math.min(60, installmentPeriods));
+  const basePeriodAmount = Math.floor(parsedAmount / activePeriods);
+  const remainder = parsedAmount - basePeriodAmount * activePeriods;
+  const firstPeriodAmount = basePeriodAmount + remainder;
+  const endPeriodDate = useMemo(() => {
+    try {
+      return format(addMonths(parseISO(date), activePeriods - 1), 'yyyy-MM-dd');
+    } catch {
+      return date;
+    }
+  }, [date, activePeriods]);
 
   // 取得歷史常去商家清單
   const uniqueMerchants = useMemo(() => getUniqueMerchants(transactions), [transactions]);
@@ -142,6 +166,59 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       const tags = tagInput
         .split(',')
         .map((t) => t.trim())
+        .filter(Boolean);
+
+      // 分期付款模式：自動依期數產生對應交易並批次寫入
+      if (canUseInstallment && isInstallment) {
+        if (!tags.includes('分期付款')) {
+          tags.push('分期付款');
+        }
+
+        const groupId = 'inst_' + uuidv4().slice(0, 10);
+        const installmentTxs: Transaction[] = [];
+
+        for (let i = 0; i < activePeriods; i++) {
+          const curPeriod = i + 1;
+          const curAmount = i === 0 ? firstPeriodAmount : basePeriodAmount;
+          const curDate = format(addMonths(parseISO(date), i), 'yyyy-MM-dd');
+          const periodNote = note.trim()
+            ? `${note.trim()} (${curPeriod}/${activePeriods}期)`
+            : `分期付款 (${curPeriod}/${activePeriods}期)`;
+
+          installmentTxs.push({
+            id: 'tx_' + uuidv4().slice(0, 10),
+            userId: user.uid,
+            accountId,
+            categoryId,
+            type: 'expense',
+            amount: curAmount,
+            merchant: merchant.trim() || undefined,
+            note: periodNote,
+            tags,
+            date: curDate,
+            installment: {
+              groupId,
+              currentPeriod: curPeriod,
+              totalPeriods: activePeriods,
+              totalAmount: parsedAmount,
+              periodAmount: curAmount
+            },
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+
+        await addInstallmentTransactions(installmentTxs);
+        clearDraft();
+        addToast({
+          type: 'success',
+          message: `已建立信用卡分期（共 ${activePeriods} 期，每期約 NT$ ${basePeriodAmount.toLocaleString()}）！`
+        });
+        if (onSuccess) onSuccess();
+        return;
+      }
+
+      // 一般交易建立
       const transaction: Transaction = {
         id: initialData?.id || 'tx_' + uuidv4().slice(0, 10),
         userId: user.uid,
@@ -210,9 +287,16 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
       {/* 金額輸入 */}
       <div>
-        <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          金額 (NT$)
-        </label>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            {canUseInstallment && isInstallment ? '消費總金額 (NT$)' : '金額 (NT$)'}
+          </label>
+          {canUseInstallment && isInstallment && parsedAmount > 0 && (
+            <span style={{ fontSize: '12px', color: 'var(--expense)', fontWeight: 700 }}>
+              分 {activePeriods} 期 • 每期約 ${basePeriodAmount.toLocaleString()}
+            </span>
+          )}
+        </div>
         <div style={{ position: 'relative', marginTop: '4px' }}>
           <span
             style={{
@@ -373,6 +457,169 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           />
         )}
       </div>
+
+      {/* 信用卡分期付款選項 (當支出且帳戶為信用卡時顯示) */}
+      {canUseInstallment && (
+        <div
+          style={{
+            padding: '12px 14px',
+            backgroundColor: isInstallment ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-tertiary)',
+            border: isInstallment ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CreditCard size={18} color={isInstallment ? '#3b82f6' : 'var(--text-secondary)'} />
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  💳 信用卡分期付款
+                </span>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  將此筆消費按月拆分為多期每期扣款
+                </div>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
+            <button
+              type="button"
+              onClick={() => setIsInstallment(!isInstallment)}
+              style={{
+                width: '42px',
+                height: '24px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: isInstallment ? 'var(--primary)' : 'var(--border)',
+                border: 'none',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: '#ffffff',
+                  position: 'absolute',
+                  top: '3px',
+                  left: isInstallment ? '21px' : '3px',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                }}
+              />
+            </button>
+          </div>
+
+          {/* 分期詳細設定與試算 */}
+          {isInstallment && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                  選擇分期期數
+                </label>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {[3, 6, 12, 24].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        setInstallmentPeriods(p);
+                        setIsCustomPeriods(false);
+                      }}
+                      style={{
+                        flex: '1 1 50px',
+                        padding: '6px 10px',
+                        borderRadius: 'var(--radius-sm)',
+                        border: !isCustomPeriods && installmentPeriods === p ? '1px solid var(--primary)' : '1px solid var(--border)',
+                        backgroundColor: !isCustomPeriods && installmentPeriods === p ? 'var(--primary)' : 'var(--bg-secondary)',
+                        color: !isCustomPeriods && installmentPeriods === p ? '#ffffff' : 'var(--text-primary)',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p} 期
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomPeriods(true)}
+                    style={{
+                      flex: '1 1 50px',
+                      padding: '6px 10px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: isCustomPeriods ? '1px solid var(--primary)' : '1px solid var(--border)',
+                      backgroundColor: isCustomPeriods ? 'var(--primary)' : 'var(--bg-secondary)',
+                      color: isCustomPeriods ? '#ffffff' : 'var(--text-primary)',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    自訂
+                  </button>
+                </div>
+
+                {isCustomPeriods && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={60}
+                      label="自訂期數 (2 ~ 60 期)"
+                      value={String(installmentPeriods)}
+                      onChange={(e) => setInstallmentPeriods(Math.max(2, Math.min(60, parseInt(e.target.value) || 2)))}
+                      placeholder="請輸入期數 (例如：5)"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 試算結果卡片 */}
+              {parsedAmount > 0 && (
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 12px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    border: '1px dashed rgba(59, 130, 246, 0.3)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                    <span>消費總金額：</span>
+                    <strong style={{ color: 'var(--text-primary)' }}>${parsedAmount.toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                    <span>每期應繳金額：</span>
+                    <strong style={{ color: 'var(--expense)', fontSize: '13px' }}>
+                      {remainder === 0
+                        ? `$${basePeriodAmount.toLocaleString()} / 期 (共 ${activePeriods} 期)`
+                        : `首期 $${firstPeriodAmount.toLocaleString()}，後續 $${basePeriodAmount.toLocaleString()} / 期`}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px' }}>
+                    <span>分期起訖日：</span>
+                    <span>{date} 至 {endPeriodDate}</span>
+                  </div>
+                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--primary-light)', lineHeight: 1.4 }}>
+                    ✨ 系統將自動為您依序建立 {activePeriods} 筆按月到期的每期扣款紀錄，隨結帳日自動納入當期帳單。
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 分類選擇 (非轉帳時顯示) */}
       {type !== 'transfer' && (

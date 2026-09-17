@@ -3,7 +3,7 @@ import { Transaction, Category, Account } from '@/types';
 import * as Icons from 'lucide-react';
 import { Trash2, ArrowRightLeft } from 'lucide-react';
 import { formatCurrency } from '@/utils/analytics';
-import { deleteTransaction } from '@/services/firestore';
+import { deleteTransaction, deleteInstallmentGroup } from '@/services/firestore';
 import { useAppStore } from '@/stores/appStore';
 
 import { getSafeIcon } from '@/utils/iconHelper';
@@ -36,13 +36,35 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm('確定要刪除這筆交易記錄嗎？帳戶餘額將自動回補。')) {
-      try {
-        await deleteTransaction(transaction);
-        addToast({ type: 'info', message: '已刪除交易' });
-      } catch (err: any) {
-        addToast({ type: 'error', message: '刪除失敗: ' + err.message });
+
+    if (transaction.installment) {
+      const { currentPeriod, totalPeriods, groupId } = transaction.installment;
+      const confirmAll = window.confirm(
+        `此交易為信用卡分期第 ${currentPeriod}/${totalPeriods} 期記錄。\n\n【確定】：刪除全部 ${totalPeriods} 期分期記錄\n【取消】：僅刪除此單期記錄`
+      );
+      if (confirmAll) {
+        try {
+          await deleteInstallmentGroup(transaction.userId, groupId);
+          addToast({ type: 'info', message: `已刪除全部分期記錄 (共 ${totalPeriods} 期)` });
+        } catch (err: any) {
+          addToast({ type: 'error', message: '刪除失敗: ' + err.message });
+        }
+        return;
       }
+      if (!window.confirm(`確定要「僅刪除」第 ${currentPeriod}/${totalPeriods} 期記錄嗎？`)) {
+        return;
+      }
+    } else {
+      if (!window.confirm('確定要刪除這筆交易記錄嗎？帳戶餘額將自動回補。')) {
+        return;
+      }
+    }
+
+    try {
+      await deleteTransaction(transaction);
+      addToast({ type: 'info', message: '已刪除交易' });
+    } catch (err: any) {
+      addToast({ type: 'error', message: '刪除失敗: ' + err.message });
     }
   };
 
@@ -109,6 +131,22 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                 }}
               >
                 AI
+              </span>
+            )}
+            {transaction.installment && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  color: '#3b82f6',
+                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  border: '1px solid rgba(59, 130, 246, 0.3)'
+                }}
+                title={`總金額 $${transaction.installment.totalAmount.toLocaleString()}`}
+              >
+                分期 {transaction.installment.currentPeriod}/{transaction.installment.totalPeriods}
               </span>
             )}
           </div>

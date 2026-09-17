@@ -196,8 +196,15 @@ export const Accounts: React.FC = () => {
                       {acc.creditLimit && (
                         <div style={{ marginTop: '8px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                            <span>可用額度：{formatCurrency(cardUsage.availableLimit)}</span>
-                            <span>已用 {cardUsage.usagePercent}%</span>
+                            <span>
+                              可用額度：{formatCurrency(cardUsage.availableLimit)}
+                              {cardUsage.futureInstallments > 0 && (
+                                <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>
+                                  (含未到期分期 {formatCurrency(cardUsage.futureInstallments)})
+                                </span>
+                              )}
+                            </span>
+                            <span>已佔用 {cardUsage.usagePercent}%</span>
                           </div>
                           <div style={{ width: '100%', height: '6px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
                             <div

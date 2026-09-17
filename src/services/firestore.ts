@@ -351,6 +351,48 @@ export async function addTransaction(transaction: Transaction): Promise<void> {
 }
 
 /**
+ * 批次新增信用卡分期交易
+ */
+export async function addInstallmentTransactions(transactions: Transaction[]): Promise<void> {
+  if (!transactions || transactions.length === 0) return;
+  const firstTx = transactions[0];
+  const { userId, accountId } = firstTx;
+  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+  if (!isFirebaseConfigured) {
+    const txList = LocalStore.get<Transaction[]>('transactions_' + userId, []);
+    txList.unshift(...transactions);
+    LocalStore.set('transactions_' + userId, txList);
+
+    const accList = LocalStore.get<Account[]>('accounts_' + userId, []);
+    const sourceAcc = accList.find(a => a.id === accountId);
+    if (sourceAcc) {
+      sourceAcc.balance -= totalAmount;
+    }
+    LocalStore.set('accounts_' + userId, accList);
+    return;
+  }
+
+  await runTransaction(db, async (t) => {
+    const accDocRef = doc(db, 'users', userId, 'accounts', accountId);
+    const accDoc = await t.get(accDocRef);
+
+    if (accDoc.exists()) {
+      const currentBalance = accDoc.data().balance || 0;
+      t.update(accDocRef, {
+        balance: currentBalance - totalAmount,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    for (const tx of transactions) {
+      const txDocRef = doc(db, 'users', userId, 'transactions', tx.id);
+      t.set(txDocRef, cleanUndefined(tx));
+    }
+  });
+}
+
+/**
  * 刪除交易並回補帳戶餘額
  */
 export async function deleteTransaction(transaction: Transaction): Promise<void> {
@@ -408,6 +450,62 @@ export async function deleteTransaction(transaction: Transaction): Promise<void>
     }
 
     t.delete(txDocRef);
+  });
+}
+
+/**
+ * 批次刪除同一分期群組之所有交易並回補帳戶額度
+ */
+export async function deleteInstallmentGroup(userId: string, groupId: string): Promise<void> {
+  if (!isFirebaseConfigured) {
+    const txList = LocalStore.get<Transaction[]>('transactions_' + userId, []);
+    const matching = txList.filter((t) => t.installment?.groupId === groupId);
+    if (matching.length === 0) return;
+
+    const accountId = matching[0].accountId;
+    const totalAmount = matching.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+    LocalStore.set(
+      'transactions_' + userId,
+      txList.filter((t) => t.installment?.groupId !== groupId)
+    );
+
+    const accList = LocalStore.get<Account[]>('accounts_' + userId, []);
+    const sourceAcc = accList.find((a) => a.id === accountId);
+    if (sourceAcc) {
+      sourceAcc.balance += totalAmount;
+    }
+    LocalStore.set('accounts_' + userId, accList);
+    return;
+  }
+
+  // Firebase Firestore: 查詢同 groupId 的所有文檔
+  const q = query(
+    collection(db, 'users', userId, 'transactions'),
+    where('installment.groupId', '==', groupId)
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+
+  const docs = snap.docs;
+  const firstData = docs[0].data() as Transaction;
+  const accountId = firstData.accountId;
+  const totalAmount = docs.reduce((sum, d) => sum + ((d.data() as Transaction).amount || 0), 0);
+
+  await runTransaction(db, async (t) => {
+    const accDocRef = doc(db, 'users', userId, 'accounts', accountId);
+    const accDoc = await t.get(accDocRef);
+    if (accDoc.exists()) {
+      const currentBalance = accDoc.data().balance || 0;
+      t.update(accDocRef, {
+        balance: currentBalance + totalAmount,
+        updatedAt: new Date().toISOString()
+      });
+    }
+
+    for (const d of docs) {
+      t.delete(d.ref);
+    }
   });
 }
 

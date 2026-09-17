@@ -13,9 +13,11 @@ export interface CreditCardCycleInfo {
   cycleEndDate: string;
   lastClosingDate: string;
   daysRemaining: number;
-  usedAmount: number;
-  availableLimit: number;
-  usagePercent: number;
+  usedAmount: number;             // 本期已刷未出帳 (當期帳單金額)
+  futureInstallments: number;     // 未來未到期分期總額
+  totalOccupiedLimit: number;     // 總佔用信用額度 (本期 + 未來分期)
+  availableLimit: number;         // 剩餘可用額度
+  usagePercent: number;           // 額度佔用百分比
 }
 
 export interface CashWalletUsageInfo {
@@ -113,9 +115,19 @@ export function calculateCreditCardUsage(
     usedAmount = Math.abs(account.balance);
   }
 
+  // 統計未到期的未來分期/支出款項 (日期在 cycleEnd 之後)，用於精確計算信用卡剩餘額度
+  const futureInstallments = (transactions || [])
+    .filter((t) => {
+      if (!t || t.accountId !== account.id || !t.date || t.type !== 'expense') return false;
+      const d = t.date.replace(/\//g, '-');
+      return d > cycleEnd;
+    })
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  const totalOccupiedLimit = usedAmount + futureInstallments;
   const creditLimit = Number(account.creditLimit) || 0;
-  const availableLimit = Math.max(0, creditLimit - usedAmount);
-  const usagePercent = creditLimit > 0 ? parseFloat(((usedAmount / creditLimit) * 100).toFixed(1)) : 0;
+  const availableLimit = Math.max(0, creditLimit - totalOccupiedLimit);
+  const usagePercent = creditLimit > 0 ? parseFloat(((totalOccupiedLimit / creditLimit) * 100).toFixed(1)) : 0;
 
   return {
     billingCycleDay: billingDay,
@@ -124,6 +136,8 @@ export function calculateCreditCardUsage(
     lastClosingDate,
     daysRemaining: Math.max(0, differenceInDays(parseISO(cycleEnd), refDate)),
     usedAmount,
+    futureInstallments,
+    totalOccupiedLimit,
     availableLimit,
     usagePercent
   };
