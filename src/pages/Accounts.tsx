@@ -4,25 +4,28 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { AccountForm } from '@/components/accounts/AccountForm';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
-import { useAccounts, useTotalNetWorth, useTransactions } from '@/hooks/useFirestore';
+import { SubscriptionManagerModal } from '@/components/subscriptions/SubscriptionManagerModal';
+import { useAccounts, useTotalNetWorth, useTransactions, useSubscriptions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { Account } from '@/types';
 import { formatCurrency } from '@/utils/analytics';
 import { deleteAccount, saveAccount } from '@/services/firestore';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
-import { Plus, Edit3, Trash2, ArrowRightLeft, Calendar, Sparkles } from 'lucide-react';
+import { Plus, Edit3, Trash2, ArrowRightLeft, Calendar, Sparkles, Repeat } from 'lucide-react';
 import { getSafeIcon } from '@/utils/iconHelper';
 
 export const Accounts: React.FC = () => {
-  const { user, addToast } = useAppStore();
+  const { user, addToast, setTransactionModalOpen } = useAppStore();
   const { accounts } = useAccounts();
   const { cashTotal } = useTotalNetWorth();
   const { transactions } = useTransactions();
+  const { subscriptions } = useSubscriptions();
 
   const [isAccountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | undefined>(undefined);
   const [isTransferModalOpen, setTransferModalOpen] = useState(false);
   const [transferSourceAccId, setTransferSourceAccId] = useState<string>('');
+  const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
 
   const handleEdit = (acc: Account) => {
     setEditingAccount(acc);
@@ -81,6 +84,15 @@ export const Accounts: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSubscriptionModalOpen(true)}
+            icon={<Repeat size={16} />}
+          >
+            信用卡訂閱管理 {subscriptions.filter(s => s.status === 'active').length > 0 ? `(${subscriptions.filter(s => s.status === 'active').length})` : ''}
+          </Button>
+
           <Button
             variant="secondary"
             size="sm"
@@ -219,6 +231,43 @@ export const Accounts: React.FC = () => {
                           </div>
                         </div>
                       )}
+
+                      {/* 該信用卡綁定之進行中訂閱 */}
+                      {(() => {
+                        const cardSubs = subscriptions.filter((s) => s.accountId === acc.id && s.status === 'active');
+                        if (cardSubs.length === 0) return null;
+                        const cardSubMonthly = cardSubs.reduce((sum, s) => sum + s.amount, 0);
+                        return (
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSubscriptionModalOpen(true);
+                            }}
+                            style={{
+                              marginTop: '10px',
+                              padding: '6px 10px',
+                              backgroundColor: 'rgba(168, 85, 247, 0.1)',
+                              border: '1px solid rgba(168, 85, 247, 0.25)',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '11px',
+                              color: 'var(--purple)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              cursor: 'pointer'
+                            }}
+                            title="點擊查看此信用卡之定期訂閱"
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                              <Repeat size={12} />
+                              定期訂閱 {cardSubs.length} 項
+                            </span>
+                            <span style={{ fontWeight: 700 }}>
+                              每月 NT$ {cardSubMonthly.toLocaleString()}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })()}
@@ -397,6 +446,13 @@ export const Accounts: React.FC = () => {
           onCancel={() => setTransferModalOpen(false)}
         />
       </Modal>
+
+      {/* 信用卡定期訂閱服務管理 Modal */}
+      <SubscriptionManagerModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setSubscriptionModalOpen(false)}
+        onOpenNewSubscription={() => setTransactionModalOpen(true)}
+      />
     </div>
   );
 };

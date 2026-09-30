@@ -6,6 +6,8 @@ import {
   subscribeTransactions,
   subscribeBudgets,
   subscribeStockHoldings,
+  subscribeSubscriptions,
+  processDueSubscriptions,
   initializeUserData
 } from '@/services/firestore';
 import {
@@ -13,7 +15,8 @@ import {
   Category,
   Transaction,
   Budget,
-  StockHolding
+  StockHolding,
+  Subscription
 } from '@/types';
 
 /**
@@ -208,3 +211,85 @@ export function useTotalNetWorth() {
     stockTotalTWD
   };
 }
+
+/**
+ * 監聽並取得使用者之信用卡定期訂閱清單
+ */
+export function useSubscriptions() {
+  const userId = useAppStore((state) => state.user?.uid);
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userId) {
+      setSubscriptions([]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    const unsubscribe = subscribeSubscriptions(userId, (data) => {
+      setSubscriptions(Array.isArray(data) ? data : []);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [userId]);
+
+  return { subscriptions, loading };
+}
+
+/**
+ * 自動排程檢查器：自動偵測並執行已到期的信用卡定期訂閱扣款
+ * 具備視窗焦點回歸、防重複執行、定時輪巡機制
+ */
+export function useSubscriptionAutoProcessor() {
+  const userId = useAppStore((state) => state.user?.uid);
+  const addToast = useAppStore((state) => state.addToast);
+  const isProcessingRef = useRef(false);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const runProcessor = async () => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
+      try {
+        const generated = await processDueSubscriptions(userId);
+        if (generated.length > 0) {
+          const names = generated.map((t) => t.merchant || t.note || '訂閱項目').slice(0, 3).join('、');
+          const extra = generated.length > 3 ? ` 等共 ${generated.length} 筆` : '';
+          addToast({
+            type: 'info',
+            message: `✨ 已自動完成 ${generated.length} 筆到期信用卡訂閱扣款紀錄：${names}${extra}`
+          });
+        }
+      } catch (err) {
+        console.error('[useSubscriptionAutoProcessor] 檢查失敗:', err);
+      } finally {
+        isProcessingRef.current = false;
+      }
+    };
+
+    // 1. 初次載入即檢查
+    runProcessor();
+
+    // 2. 視窗切換回前景或可見時檢查
+    const handleFocus = () => runProcessor();
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        runProcessor();
+      }
+    });
+
+    // 3. 定時每 30 分鐘背景輪巡檢查
+    const timer = setInterval(runProcessor, 30 * 60 * 1000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(timer);
+    };
+  }, [userId, addToast]);
+}
+

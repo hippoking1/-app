@@ -4,23 +4,28 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { TransactionItem } from '@/components/transactions/TransactionItem';
-import { useTransactions, useCategories, useAccounts } from '@/hooks/useFirestore';
+import { useTransactions, useCategories, useAccounts, useSubscriptions } from '@/hooks/useFirestore';
+import { SubscriptionManagerModal } from '@/components/subscriptions/SubscriptionManagerModal';
 import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/analytics';
 import { TransactionType } from '@/types';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
-import { Search, Plus, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, Plus, ChevronLeft, ChevronRight, Filter, Repeat } from 'lucide-react';
 
 export const Transactions: React.FC = () => {
   const { currentMonth, setCurrentMonth, setTransactionModalOpen } = useAppStore();
   const { transactions } = useTransactions({ month: currentMonth });
   const { categories } = useCategories();
   const { accounts } = useAccounts();
+  const { subscriptions } = useSubscriptions();
 
   const [keyword, setKeyword] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | TransactionType>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | TransactionType | 'subscription'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+  const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+
+  const activeSubsCount = subscriptions.filter((s) => s.status === 'active').length;
 
   // 月份導航
   const handlePrevMonth = () => {
@@ -35,7 +40,11 @@ export const Transactions: React.FC = () => {
 
   // 過濾邏輯
   const filtered = transactions.filter((t) => {
-    if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+    if (typeFilter === 'subscription') {
+      if (!t.subscription && !t.tags?.includes('訂閱付款')) return false;
+    } else if (typeFilter !== 'all' && t.type !== typeFilter) {
+      return false;
+    }
     if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId && t.transferToAccountId !== selectedAccountId) return false;
     if (selectedCategoryId !== 'all' && t.categoryId !== selectedCategoryId) return false;
     if (keyword.trim()) {
@@ -103,14 +112,25 @@ export const Transactions: React.FC = () => {
           </button>
         </div>
 
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setTransactionModalOpen(true)}
-          icon={<Plus size={16} />}
-        >
-          新增交易
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setSubscriptionModalOpen(true)}
+            icon={<Repeat size={15} />}
+          >
+            信用卡訂閱管理 {activeSubsCount > 0 ? `(${activeSubsCount})` : ''}
+          </Button>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setTransactionModalOpen(true)}
+            icon={<Plus size={16} />}
+          >
+            新增交易
+          </Button>
+        </div>
       </div>
 
       {/* 月度收支摘要卡片 */}
@@ -146,7 +166,8 @@ export const Transactions: React.FC = () => {
               { value: 'all', label: '全部類型' },
               { value: 'expense', label: '僅支出' },
               { value: 'income', label: '僅收入' },
-              { value: 'transfer', label: '僅轉帳' }
+              { value: 'transfer', label: '僅轉帳' },
+              { value: 'subscription', label: '🔁 僅訂閱扣款' }
             ]}
           />
 
@@ -217,6 +238,13 @@ export const Transactions: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* 信用卡定期訂閱服務管理 Modal */}
+      <SubscriptionManagerModal
+        isOpen={isSubscriptionModalOpen}
+        onClose={() => setSubscriptionModalOpen(false)}
+        onOpenNewSubscription={() => setTransactionModalOpen(true)}
+      />
     </div>
   );
 };

@@ -1,17 +1,18 @@
 import React, { useState, useMemo } from 'react';
-import { Transaction, TransactionType } from '@/types';
+import { Transaction, TransactionType, Subscription, SubscriptionPeriod } from '@/types';
 import { useAccounts, useCategories, useTransactions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
-import { addTransaction, addInstallmentTransactions } from '@/services/firestore';
+import { addTransaction, addInstallmentTransactions, saveSubscription } from '@/services/firestore';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CategoryPicker } from './CategoryPicker';
 import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
+import { calculateNextBillingDate, POPULAR_SUBSCRIPTION_PRESETS, SubscriptionPreset } from '@/utils/subscriptionUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { format, addMonths, parseISO } from 'date-fns';
-import { MapPin, Sparkles, CreditCard, Layers } from 'lucide-react';
+import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock } from 'lucide-react';
 
 interface TransactionFormProps {
   initialData?: Partial<Transaction>;
@@ -54,10 +55,46 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [installmentPeriods, setInstallmentPeriods] = useState(3);
   const [isCustomPeriods, setIsCustomPeriods] = useState(false);
 
+  // 信用卡定期訂閱付款狀態
+  const [isSubscription, setIsSubscription] = useState(false);
+  const [subscriptionPeriod, setSubscriptionPeriod] = useState<SubscriptionPeriod>('monthly');
+  const [billingCycleDay, setBillingCycleDay] = useState<number>(() => {
+    try {
+      return parseISO(date).getDate();
+    } catch {
+      return 1;
+    }
+  });
+  const [recordFirstImmediately, setRecordFirstImmediately] = useState(true);
+
   // 判斷選中帳戶是否為信用卡且為支出模式
   const selectedAccount = useMemo(() => accounts.find((a) => a.id === accountId), [accounts, accountId]);
   const isCreditCard = selectedAccount?.type === 'credit_card';
   const canUseInstallment = type === 'expense' && isCreditCard;
+  const canUseSubscription = type === 'expense' && isCreditCard;
+
+  // 訂閱下次扣款預覽日期
+  const previewNextBilling = useMemo(() => {
+    return calculateNextBillingDate(date, subscriptionPeriod, billingCycleDay);
+  }, [date, subscriptionPeriod, billingCycleDay]);
+
+  // 套用熱門訂閱範本
+  const handleApplySubscriptionPreset = (preset: SubscriptionPreset) => {
+    setMerchant(preset.name);
+    setAmount(String(preset.defaultAmount));
+    setSubscriptionPeriod(preset.period);
+    setIsSubscription(true);
+    setIsInstallment(false);
+    if (!tagInput.includes('訂閱付款')) {
+      setTagInput(tagInput ? `${tagInput}, 訂閱付款` : '訂閱付款');
+    }
+    const matchedCategory = categories.find(
+      (c) => c.type === 'expense' && c.name.includes(preset.categoryKeyword)
+    );
+    if (matchedCategory) {
+      setCategoryId(matchedCategory.id);
+    }
+  };
 
   // 分期試算數據
   const parsedAmount = parseFloat(amount) || 0;
@@ -218,6 +255,69 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         return;
       }
 
+      // 信用卡定期訂閱付款模式：建立訂閱排程並視需要紀錄首期支出
+      if (canUseSubscription && isSubscription) {
+        const subTags = Array.from(new Set([...tags, '訂閱付款']));
+        const subId = 'sub_' + uuidv4().slice(0, 10);
+        const subName = merchant.trim() || note.trim() || '信用卡定期訂閱';
+        const initialDate = date;
+        const nextDate = recordFirstImmediately
+          ? calculateNextBillingDate(initialDate, subscriptionPeriod, billingCycleDay)
+          : initialDate;
+
+        const newSubscription: Subscription = {
+          id: subId,
+          userId: user.uid,
+          name: subName,
+          accountId,
+          categoryId,
+          amount: parsedAmount,
+          period: subscriptionPeriod,
+          billingCycleDay,
+          startDate: initialDate,
+          nextBillingDate: nextDate,
+          status: 'active',
+          autoRecord: true,
+          note: note.trim(),
+          tags: subTags,
+          lastRecordedDate: recordFirstImmediately ? initialDate : undefined,
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await saveSubscription(newSubscription);
+
+        if (recordFirstImmediately) {
+          const initialTx: Transaction = {
+            id: initialData?.id || 'tx_' + uuidv4().slice(0, 10),
+            userId: user.uid,
+            accountId,
+            categoryId,
+            type: 'expense',
+            amount: parsedAmount,
+            merchant: merchant.trim() || undefined,
+            note: note.trim() ? `${note.trim()} (首期訂閱扣款)` : `${subName} (首期訂閱扣款)`,
+            tags: subTags,
+            date: initialDate,
+            subscription: {
+              subscriptionId: subId,
+              period: subscriptionPeriod
+            },
+            createdAt: now,
+            updatedAt: now
+          };
+          await addTransaction(initialTx);
+        }
+
+        clearDraft();
+        addToast({
+          type: 'success',
+          message: `已建立「${subName}」信用卡定期訂閱！系統將在指定時間自行紀錄。`
+        });
+        if (onSuccess) onSuccess();
+        return;
+      }
+
       // 一般交易建立
       const transaction: Transaction = {
         id: initialData?.id || 'tx_' + uuidv4().slice(0, 10),
@@ -289,11 +389,20 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            {canUseInstallment && isInstallment ? '消費總金額 (NT$)' : '金額 (NT$)'}
+            {canUseInstallment && isInstallment
+              ? '分期總金額 (NT$)'
+              : canUseSubscription && isSubscription
+              ? `每期訂閱金額 (NT$ / ${subscriptionPeriod === 'yearly' ? '年' : subscriptionPeriod === 'weekly' ? '週' : '月'})`
+              : '金額 (NT$)'}
           </label>
           {canUseInstallment && isInstallment && parsedAmount > 0 && (
             <span style={{ fontSize: '12px', color: 'var(--expense)', fontWeight: 700 }}>
               分 {activePeriods} 期 • 每期約 ${basePeriodAmount.toLocaleString()}
+            </span>
+          )}
+          {canUseSubscription && isSubscription && parsedAmount > 0 && (
+            <span style={{ fontSize: '12px', color: 'var(--purple)', fontWeight: 700 }}>
+              每期 ${parsedAmount.toLocaleString()} • 每月 {billingCycleDay} 號扣款
             </span>
           )}
         </div>
@@ -488,7 +597,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             {/* Switch Toggle */}
             <button
               type="button"
-              onClick={() => setIsInstallment(!isInstallment)}
+              onClick={() => {
+                const next = !isInstallment;
+                setIsInstallment(next);
+                if (next) setIsSubscription(false);
+              }}
               style={{
                 width: '42px',
                 height: '24px',
@@ -613,6 +726,214 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   </div>
                   <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--primary-light)', lineHeight: 1.4 }}>
                     ✨ 系統將自動為您依序建立 {activePeriods} 筆按月到期的每期扣款紀錄，隨結帳日自動納入當期帳單。
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 信用卡定期訂閱付款選項 (當支出且帳戶為信用卡時顯示) */}
+      {canUseSubscription && (
+        <div
+          style={{
+            padding: '12px 14px',
+            backgroundColor: isSubscription ? 'rgba(168, 85, 247, 0.08)' : 'var(--bg-tertiary)',
+            border: isSubscription ? '1px solid rgba(168, 85, 247, 0.35)' : '1px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Repeat size={18} color={isSubscription ? 'var(--purple)' : 'var(--text-secondary)'} />
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  🔁 信用卡定期訂閱付款
+                </span>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  設定週期扣款，在指定時間自行紀錄並可隨時取消
+                </div>
+              </div>
+            </div>
+
+            {/* Switch Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = !isSubscription;
+                setIsSubscription(next);
+                if (next) setIsInstallment(false);
+              }}
+              style={{
+                width: '42px',
+                height: '24px',
+                borderRadius: 'var(--radius-full)',
+                backgroundColor: isSubscription ? 'var(--purple)' : 'var(--border)',
+                border: 'none',
+                position: 'relative',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+            >
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: 'var(--radius-full)',
+                  backgroundColor: '#ffffff',
+                  position: 'absolute',
+                  top: '3px',
+                  left: isSubscription ? '21px' : '3px',
+                  transition: 'left 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                }}
+              />
+            </button>
+          </div>
+
+          {/* 訂閱詳細設定與試算 */}
+          {isSubscription && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '4px' }}>
+              {/* 熱門訂閱範本快捷點選 */}
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  快速套用常見訂閱服務：
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {POPULAR_SUBSCRIPTION_PRESETS.map((p) => (
+                    <button
+                      key={p.name}
+                      type="button"
+                      onClick={() => handleApplySubscriptionPreset(p)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 'var(--radius-full)',
+                        backgroundColor: merchant === p.name ? 'rgba(168, 85, 247, 0.2)' : 'var(--bg-secondary)',
+                        border: merchant === p.name ? '1px solid var(--purple)' : '1px solid var(--border)',
+                        color: merchant === p.name ? 'var(--purple)' : 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
+                      }}
+                    >
+                      {p.name} (${p.defaultAmount})
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 扣款週期與指定扣款日 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    扣款週期
+                  </label>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[
+                      { key: 'monthly', label: '每月' },
+                      { key: 'yearly', label: '每年' },
+                      { key: 'weekly', label: '每週' }
+                    ].map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setSubscriptionPeriod(item.key as SubscriptionPeriod)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 0',
+                          borderRadius: 'var(--radius-sm)',
+                          border: subscriptionPeriod === item.key ? '1px solid var(--purple)' : '1px solid var(--border)',
+                          backgroundColor: subscriptionPeriod === item.key ? 'var(--purple)' : 'var(--bg-secondary)',
+                          color: subscriptionPeriod === item.key ? '#ffffff' : 'var(--text-primary)',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={31}
+                    label="每月指定扣款日 (1 ~ 31 號)"
+                    value={String(billingCycleDay)}
+                    onChange={(e) => {
+                      const d = parseInt(e.target.value) || 1;
+                      setBillingCycleDay(Math.max(1, Math.min(31, d)));
+                    }}
+                    placeholder="例如：15"
+                  />
+                </div>
+              </div>
+
+              {/* 首期扣款設定 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 10px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '12px'
+                }}
+              >
+                <input
+                  type="checkbox"
+                  id="recordFirstImmediately"
+                  checked={recordFirstImmediately}
+                  onChange={(e) => setRecordFirstImmediately(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--purple)', cursor: 'pointer' }}
+                />
+                <label htmlFor="recordFirstImmediately" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
+                  立即記錄首期扣款 (日期為：<strong>{date}</strong>)
+                </label>
+              </div>
+
+              {/* 試算與說明卡片 */}
+              {parsedAmount > 0 && (
+                <div
+                  style={{
+                    backgroundColor: 'var(--bg-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '10px 12px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px',
+                    border: '1px dashed rgba(168, 85, 247, 0.35)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                    <span>訂閱服務名稱：</span>
+                    <strong style={{ color: 'var(--text-primary)' }}>{merchant || note || '信用卡定期訂閱'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                    <span>每期扣款金額：</span>
+                    <strong style={{ color: 'var(--expense)', fontSize: '13px' }}>
+                      ${parsedAmount.toLocaleString()} / {subscriptionPeriod === 'yearly' ? '年' : subscriptionPeriod === 'weekly' ? '週' : '月'}
+                    </strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px' }}>
+                    <span>下次自動扣款日：</span>
+                    <span style={{ color: 'var(--purple)', fontWeight: 700 }}>
+                      {recordFirstImmediately ? previewNextBilling : date} (每月 {billingCycleDay} 號)
+                    </span>
+                  </div>
+                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    ✨ 系統將在指定時間於背景自行紀錄支出並自動計入信用卡帳單；您可以隨時在「訂閱管理」中暫停或取消訂閱以停止自動紀錄。
                   </div>
                 </div>
               )}

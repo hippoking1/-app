@@ -65,6 +65,44 @@ export interface InstallmentInfo {
   periodAmount: number;   // 本期應繳金額
 }
 
+// 訂閱週期類型
+export type SubscriptionPeriod = 'monthly' | 'yearly' | 'weekly';
+
+// 訂閱狀態類型
+export type SubscriptionStatus = 'active' | 'cancelled';
+
+/**
+ * 信用卡定期訂閱服務介面
+ */
+export interface Subscription {
+  id: string;
+  userId: string;
+  name: string;              // 訂閱項目名稱 (例如 Netflix, Spotify, ChatGPT Plus)
+  accountId: string;         // 扣款信用卡帳戶 ID
+  categoryId: string;        // 支出分類 ID
+  amount: number;            // 每期訂閱金額
+  period: SubscriptionPeriod;// 週期：每月、每年、每週 (預設 monthly)
+  billingCycleDay: number;   // 每月指定扣款日 (1 ~ 31 號)
+  startDate: string;         // 開始訂閱/首次扣款日期 (YYYY-MM-DD)
+  nextBillingDate: string;   // 下次預計扣款日 (YYYY-MM-DD)
+  status: SubscriptionStatus;// 狀態：active 訂閱中, cancelled 已取消訂閱
+  autoRecord: boolean;       // 是否由系統在指定時間自動紀錄 (取消訂閱時設為 false)
+  note?: string;             // 備註說明
+  tags: string[];            // 標籤
+  cancelledAt?: string;      // 取消訂閱時間 (ISO)
+  lastRecordedDate?: string; // 最近一次自動紀錄的扣款日期 (YYYY-MM-DD)
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 交易關聯的訂閱資訊
+ */
+export interface SubscriptionInfo {
+  subscriptionId: string;
+  period: SubscriptionPeriod;
+}
+
 /**
  * 交易記錄介面
  */
@@ -82,6 +120,7 @@ export interface Transaction {
   transferToAccountId?: string; // 轉帳目標帳戶
   aiGenerated?: string; // AI 產生的原始提示詞
   installment?: InstallmentInfo; // 信用卡分期資訊
+  subscription?: SubscriptionInfo; // 信用卡訂閱付款資訊
   createdAt: string;
   updatedAt: string;
 }

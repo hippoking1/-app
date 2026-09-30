@@ -149,6 +149,22 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                 分期 {transaction.installment.currentPeriod}/{transaction.installment.totalPeriods}
               </span>
             )}
+            {(transaction.subscription || transaction.tags?.includes('訂閱付款')) && (
+              <span
+                style={{
+                  fontSize: '10px',
+                  padding: '1px 6px',
+                  backgroundColor: 'rgba(168, 85, 247, 0.15)',
+                  color: 'var(--purple)',
+                  borderRadius: 'var(--radius-full)',
+                  fontWeight: 700,
+                  border: '1px solid rgba(168, 85, 247, 0.3)'
+                }}
+                title="信用卡定期訂閱扣款"
+              >
+                🔁 訂閱扣款
+              </span>
+            )}
           </div>
 
           <div

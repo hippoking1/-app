@@ -20,9 +20,13 @@ import {
   Transaction,
   Budget,
   StockHolding,
-  StockTransaction
+  StockTransaction,
+  Subscription
 } from '@/types';
 import { generateInitialSeedData } from './seedData';
+import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
+import { calculateNextBillingDate } from '@/utils/subscriptionUtils';
 
 // Local Demo 儲存輔助工具
 class LocalStore {
@@ -63,6 +67,7 @@ export async function initializeUserData(userId: string): Promise<void> {
       LocalStore.set('transactions_' + userId, []);
       LocalStore.set('budgets_' + userId, []);
       LocalStore.set('stocks_' + userId, []);
+      LocalStore.set('subscriptions_' + userId, []);
     }
     return;
   }
@@ -612,3 +617,213 @@ export async function deleteStockHolding(userId: string, holdingId: string): Pro
   }
   await deleteDoc(doc(db, 'users', userId, 'stockHoldings', holdingId));
 }
+
+/* ==========================================================================
+   信用卡定期訂閱 (Subscriptions) 服務
+   ========================================================================== */
+
+export function subscribeSubscriptions(userId: string, callback: (subscriptions: Subscription[]) => void): () => void {
+  if (!isFirebaseConfigured) {
+    const load = () => {
+      const data = LocalStore.get<Subscription[]>('subscriptions_' + userId, []);
+      callback(data.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    };
+    load();
+    window.addEventListener('demo_storage_update', load);
+    return () => window.removeEventListener('demo_storage_update', load);
+  }
+
+  const q = query(collection(db, 'users', userId, 'subscriptions'), orderBy('createdAt', 'desc'));
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const subs = snapshot.docs.map(d => d.data() as Subscription);
+      callback(subs);
+    },
+    (error) => {
+      console.warn('[Firestore] subscribeSubscriptions error:', error);
+      callback([]);
+    }
+  );
+}
+
+export async function saveSubscription(subscription: Subscription): Promise<void> {
+  const clean = cleanUndefined(subscription);
+  if (!isFirebaseConfigured) {
+    const list = LocalStore.get<Subscription[]>('subscriptions_' + subscription.userId, []);
+    const idx = list.findIndex(s => s.id === subscription.id);
+    if (idx >= 0) list[idx] = clean;
+    else list.push(clean);
+    LocalStore.set('subscriptions_' + subscription.userId, list);
+    return;
+  }
+
+  const ref = doc(db, 'users', subscription.userId, 'subscriptions', subscription.id);
+  await setDoc(ref, clean, { merge: true });
+}
+
+export async function cancelSubscription(userId: string, subscriptionId: string): Promise<void> {
+  const now = new Date().toISOString();
+  if (!isFirebaseConfigured) {
+    const list = LocalStore.get<Subscription[]>('subscriptions_' + userId, []);
+    const idx = list.findIndex(s => s.id === subscriptionId);
+    if (idx >= 0) {
+      list[idx] = {
+        ...list[idx],
+        status: 'cancelled',
+        autoRecord: false,
+        cancelledAt: now,
+        updatedAt: now
+      };
+      LocalStore.set('subscriptions_' + userId, list);
+    }
+    return;
+  }
+
+  const ref = doc(db, 'users', userId, 'subscriptions', subscriptionId);
+  await updateDoc(ref, {
+    status: 'cancelled',
+    autoRecord: false,
+    cancelledAt: now,
+    updatedAt: now
+  });
+}
+
+export async function reactivateSubscription(userId: string, subscriptionId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+  if (!isFirebaseConfigured) {
+    const list = LocalStore.get<Subscription[]>('subscriptions_' + userId, []);
+    const idx = list.findIndex(s => s.id === subscriptionId);
+    if (idx >= 0) {
+      const sub = list[idx];
+      let nextDate = sub.nextBillingDate;
+      if (nextDate <= todayStr) {
+        nextDate = calculateNextBillingDate(todayStr, sub.period, sub.billingCycleDay);
+      }
+      list[idx] = {
+        ...sub,
+        status: 'active',
+        autoRecord: true,
+        nextBillingDate: nextDate,
+        cancelledAt: undefined,
+        updatedAt: now
+      };
+      LocalStore.set('subscriptions_' + userId, list);
+    }
+    return;
+  }
+
+  const ref = doc(db, 'users', userId, 'subscriptions', subscriptionId);
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    const sub = snap.data() as Subscription;
+    let nextDate = sub.nextBillingDate;
+    if (nextDate <= todayStr) {
+      nextDate = calculateNextBillingDate(todayStr, sub.period, sub.billingCycleDay);
+    }
+    await updateDoc(ref, {
+      status: 'active',
+      autoRecord: true,
+      nextBillingDate: nextDate,
+      cancelledAt: null,
+      updatedAt: now
+    });
+  }
+}
+
+export async function deleteSubscription(userId: string, subscriptionId: string): Promise<void> {
+  if (!isFirebaseConfigured) {
+    const list = LocalStore.get<Subscription[]>('subscriptions_' + userId, []);
+    LocalStore.set('subscriptions_' + userId, list.filter(s => s.id !== subscriptionId));
+    return;
+  }
+
+  await deleteDoc(doc(db, 'users', userId, 'subscriptions', subscriptionId));
+}
+
+/**
+ * 檢查並自動執行已到期的信用卡定期訂閱扣款紀錄
+ * - 能在指定時間自動於背景紀錄支出
+ * - 一旦取消訂閱 (status !== 'active' 或 autoRecord === false) 絕不重複執行
+ */
+export async function processDueSubscriptions(userId: string): Promise<Transaction[]> {
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const now = new Date().toISOString();
+  const generatedTxs: Transaction[] = [];
+
+  let activeSubs: Subscription[] = [];
+
+  if (!isFirebaseConfigured) {
+    const allSubs = LocalStore.get<Subscription[]>('subscriptions_' + userId, []);
+    activeSubs = allSubs.filter(s => s.status === 'active' && s.autoRecord !== false);
+  } else {
+    try {
+      const q = query(
+        collection(db, 'users', userId, 'subscriptions'),
+        where('status', '==', 'active'),
+        where('autoRecord', '==', true)
+      );
+      const snap = await getDocs(q);
+      activeSubs = snap.docs.map(d => d.data() as Subscription);
+    } catch (err) {
+      console.warn('[Firestore] 查詢到期訂閱失敗:', err);
+      return [];
+    }
+  }
+
+  for (const sub of activeSubs) {
+    let currentNextBilling = sub.nextBillingDate;
+    let loopCount = 0;
+    const maxLoops = 12; // 防禦上限：最多自動補記 12 個週期
+
+    while (currentNextBilling <= todayStr && loopCount < maxLoops) {
+      // 避免同一天重複紀錄同一筆訂閱
+      if (sub.lastRecordedDate === currentNextBilling) {
+        currentNextBilling = calculateNextBillingDate(currentNextBilling, sub.period, sub.billingCycleDay);
+        loopCount++;
+        continue;
+      }
+
+      const txId = 'tx_sub_' + uuidv4().slice(0, 10);
+      const newTx: Transaction = {
+        id: txId,
+        userId,
+        accountId: sub.accountId,
+        categoryId: sub.categoryId,
+        type: 'expense',
+        amount: sub.amount,
+        merchant: sub.name,
+        note: `${sub.name} (訂閱扣款)`,
+        tags: Array.from(new Set([...(sub.tags || []), '訂閱付款'])),
+        date: currentNextBilling,
+        subscription: {
+          subscriptionId: sub.id,
+          period: sub.period
+        },
+        createdAt: now,
+        updatedAt: now
+      };
+
+      try {
+        await addTransaction(newTx);
+        generatedTxs.push(newTx);
+
+        sub.lastRecordedDate = currentNextBilling;
+        currentNextBilling = calculateNextBillingDate(currentNextBilling, sub.period, sub.billingCycleDay);
+        sub.nextBillingDate = currentNextBilling;
+        sub.updatedAt = now;
+        await saveSubscription(sub);
+      } catch (err) {
+        console.error(`[Firestore] 自動扣款紀錄失敗 (訂閱 ID: ${sub.id}):`, err);
+        break;
+      }
+
+      loopCount++;
+    }
+  }
+
+  return generatedTxs;
+}
+
