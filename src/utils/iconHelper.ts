@@ -1,6 +1,52 @@
 import React from 'react';
-import * as LucideIcons from 'lucide-react';
-import { Tag, Building2, Wallet, CreditCard, HelpCircle, Utensils, Car, ShoppingBag, Gamepad2, Home, HeartPulse, GraduationCap, TrendingUp, MoreHorizontal, Briefcase, Award, LineChart, Laptop, PiggyBank } from 'lucide-react';
+import {
+  Tag,
+  Building2,
+  Wallet,
+  CreditCard,
+  HelpCircle,
+  Utensils,
+  Car,
+  ShoppingBag,
+  Gamepad2,
+  Home,
+  HeartPulse,
+  GraduationCap,
+  TrendingUp,
+  TrendingDown,
+  MoreHorizontal,
+  Briefcase,
+  Award,
+  LineChart,
+  Laptop,
+  PiggyBank,
+  Coffee,
+  Bus,
+  Plane,
+  Gift,
+  Film,
+  Music,
+  Book,
+  Smartphone,
+  Wifi,
+  Zap,
+  ShoppingBasket,
+  Shirt,
+  DollarSign,
+  Coins,
+  ShieldCheck,
+  Fuel,
+  Sparkles,
+  Camera,
+  Layers,
+  Repeat,
+  Target,
+  ArrowRightLeft,
+  Calendar,
+  Clock,
+  Landmark,
+  BadgePercent
+} from 'lucide-react';
 
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Utensils,
@@ -11,6 +57,7 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   HeartPulse,
   GraduationCap,
   TrendingUp,
+  TrendingDown,
   MoreHorizontal,
   Briefcase,
   Award,
@@ -21,23 +68,40 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Building2,
   CreditCard,
   Tag,
-  HelpCircle
+  HelpCircle,
+  Coffee,
+  Bus,
+  Plane,
+  Gift,
+  Film,
+  Music,
+  Book,
+  Smartphone,
+  Wifi,
+  Zap,
+  ShoppingBasket,
+  Shirt,
+  DollarSign,
+  Coins,
+  ShieldCheck,
+  Fuel,
+  Sparkles,
+  Camera,
+  Layers,
+  Repeat,
+  Target,
+  ArrowRightLeft,
+  Calendar,
+  Clock,
+  Landmark,
+  BadgePercent
 };
 
 /**
- * 安全取得 Lucide 圖示元件，絕不回傳 undefined
+ * 安全取得 Lucide 圖示元件，絕不回傳 undefined，支援 Tree-shaking
  */
 export function getSafeIcon(iconName?: string, fallback: React.ComponentType<any> = Tag): React.ComponentType<any> {
   if (!iconName) return fallback;
-  
-  if (ICON_MAP[iconName]) {
-    return ICON_MAP[iconName];
-  }
-
-  const dynamicIcon = (LucideIcons as any)[iconName];
-  if (typeof dynamicIcon === 'function' || (typeof dynamicIcon === 'object' && dynamicIcon !== null)) {
-    return dynamicIcon;
-  }
-
-  return fallback;
+  return ICON_MAP[iconName] || fallback;
 }
+

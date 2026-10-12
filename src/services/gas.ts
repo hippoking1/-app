@@ -1,4 +1,5 @@
 import { ParsedTransaction, StockQuote, StockSearchResult, StockMarket } from '@/types';
+import { auth } from '@/lib/firebase';
 
 // 從環境變數讀取 Google Apps Script Web App 部署 URL
 export const GAS_URL = import.meta.env.VITE_GAS_DEPLOYMENT_URL || '';
@@ -34,13 +35,18 @@ async function callGAS<T>(action: string, payload: Record<string, unknown> = {})
   }
 
   try {
+    let idToken: string | undefined;
+    try {
+      idToken = await auth.currentUser?.getIdToken();
+    } catch {}
+
     // 使用 text/plain 繞過瀏覽器 CORS preflight 限制，並設定 25 秒超時
     const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: JSON.stringify({ action, payload }),
+      body: JSON.stringify({ action, payload, idToken }),
       signal: AbortSignal.timeout(25000)
     });
 

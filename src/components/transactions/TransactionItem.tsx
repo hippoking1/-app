@@ -1,12 +1,12 @@
 import React from 'react';
 import { Transaction, Category, Account } from '@/types';
-import * as Icons from 'lucide-react';
 import { Trash2, ArrowRightLeft } from 'lucide-react';
 import { formatCurrency } from '@/utils/analytics';
 import { deleteTransaction, deleteInstallmentGroup, restoreTransaction } from '@/services/firestore';
 import { useAppStore } from '@/stores/appStore';
 
 import { getSafeIcon } from '@/utils/iconHelper';
+import styles from './TransactionItem.module.css';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -83,82 +83,36 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
   return (
     <div
-      className="interactive-card"
+      className={`${styles.container} ${onEdit ? styles.containerInteractive : ''}`}
       onClick={() => onEdit?.(transaction)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 14px',
-        backgroundColor: 'var(--bg-card)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid var(--border-glass)',
-        borderRadius: 'var(--radius-lg)',
-        gap: '12px',
-        transition: 'all 0.15s ease',
-        cursor: onEdit ? 'pointer' : 'default'
-      }}
     >
       {/* 左側圖示與分類/備註 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+      <div className={styles.leftGroup}>
         <div
+          className={styles.iconBox}
           style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: 'var(--radius-md)',
             backgroundColor: `${iconColor}20`,
-            color: iconColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0
+            color: iconColor
           }}
         >
           <IconComponent size={20} />
         </div>
 
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                fontSize: '14px',
-                fontWeight: 700,
-                color: 'var(--text-primary)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}
-            >
+        <div className={styles.infoCol}>
+          <div className={styles.titleRow}>
+            <span className={styles.title}>
               {isTransfer
                 ? `${account?.name || '帳戶'} ➔ ${targetAccount?.name || '目標帳戶'}`
                 : transaction.merchant || transaction.note || category?.name || '未分類支出'}
             </span>
             {transaction.aiGenerated && (
-              <span
-                style={{
-                  fontSize: '10px',
-                  padding: '1px 6px',
-                  backgroundColor: 'rgba(168, 85, 247, 0.2)',
-                  color: 'var(--purple)',
-                  borderRadius: 'var(--radius-full)',
-                  fontWeight: 600
-                }}
-              >
+              <span className={styles.badgeAi}>
                 AI
               </span>
             )}
             {transaction.installment && (
               <span
-                style={{
-                  fontSize: '10px',
-                  padding: '1px 6px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
-                  color: '#3b82f6',
-                  borderRadius: 'var(--radius-full)',
-                  fontWeight: 700,
-                  border: '1px solid rgba(59, 130, 246, 0.3)'
-                }}
+                className={styles.badgeInstallment}
                 title={`總金額 $${transaction.installment.totalAmount.toLocaleString()}`}
               >
                 分期 {transaction.installment.currentPeriod}/{transaction.installment.totalPeriods}
@@ -166,15 +120,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             )}
             {(transaction.subscription || transaction.tags?.includes('訂閱付款')) && (
               <span
-                style={{
-                  fontSize: '10px',
-                  padding: '1px 6px',
-                  backgroundColor: 'rgba(168, 85, 247, 0.15)',
-                  color: 'var(--purple)',
-                  borderRadius: 'var(--radius-full)',
-                  fontWeight: 700,
-                  border: '1px solid rgba(168, 85, 247, 0.3)'
-                }}
+                className={styles.badgeSubscription}
                 title="信用卡定期訂閱扣款"
               >
                 🔁 訂閱扣款
@@ -182,17 +128,7 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             )}
           </div>
 
-          <div
-            style={{
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              marginTop: '2px',
-              flexWrap: 'wrap'
-            }}
-          >
+          <div className={styles.metaRow}>
             <span>{transaction.date}</span>
             <span>•</span>
             <span>{isTransfer ? '帳戶轉帳' : account?.name || '現金'}</span>
@@ -213,13 +149,11 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
       </div>
 
       {/* 右側金額與操作按鈕 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+      <div className={styles.rightGroup}>
         <div style={{ textAlign: 'right' }}>
           <div
-            className="font-mono"
+            className={styles.amount}
             style={{
-              fontSize: '15px',
-              fontWeight: 800,
               color: isExpense ? 'var(--expense)' : isIncome ? 'var(--income)' : 'var(--info)'
             }}
           >
@@ -230,20 +164,9 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
 
         <button
           onClick={handleDelete}
+          className={styles.deleteBtn}
           title="刪除"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-disabled)',
-            cursor: 'pointer',
-            padding: '6px',
-            borderRadius: 'var(--radius-sm)',
-            display: 'flex',
-            alignItems: 'center',
-            transition: 'color 0.15s'
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--expense)')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-disabled)')}
+          aria-label="刪除此筆交易"
         >
           <Trash2 size={16} />
         </button>

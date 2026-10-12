@@ -16,7 +16,7 @@ import { Search, Plus, ChevronLeft, ChevronRight, Filter, Repeat } from 'lucide-
 
 export const Transactions: React.FC = () => {
   const { currentMonth, setCurrentMonth, setTransactionModalOpen } = useAppStore();
-  const { transactions } = useTransactions({ month: currentMonth });
+  const { transactions: allTransactions } = useTransactions();
   const { categories } = useCategories();
   const { accounts } = useAccounts();
   const { subscriptions } = useSubscriptions();
@@ -41,8 +41,13 @@ export const Transactions: React.FC = () => {
     setCurrentMonth(format(next, 'yyyy-MM'));
   };
 
-  // 過濾邏輯
-  const filtered = transactions.filter((t) => {
+  // 跨月份或當月過濾邏輯：有關鍵字時自動擴展為全域跨月搜尋
+  const hasKeyword = Boolean(keyword.trim());
+  const baseTransactions = hasKeyword
+    ? allTransactions
+    : allTransactions.filter((t) => t.date.startsWith(currentMonth));
+
+  const filtered = baseTransactions.filter((t) => {
     if (typeFilter === 'subscription') {
       if (!t.subscription && !t.tags?.includes('訂閱付款')) return false;
     } else if (typeFilter !== 'all' && t.type !== typeFilter) {
@@ -50,7 +55,7 @@ export const Transactions: React.FC = () => {
     }
     if (selectedAccountId !== 'all' && t.accountId !== selectedAccountId && t.transferToAccountId !== selectedAccountId) return false;
     if (selectedCategoryId !== 'all' && t.categoryId !== selectedCategoryId) return false;
-    if (keyword.trim()) {
+    if (hasKeyword) {
       const kw = keyword.toLowerCase();
       const matchMerchant = t.merchant?.toLowerCase().includes(kw);
       const matchNote = t.note?.toLowerCase().includes(kw);
@@ -193,6 +198,40 @@ export const Transactions: React.FC = () => {
           />
         </div>
       </Card>
+
+      {/* 跨月份搜尋提示標籤 */}
+      {hasKeyword && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '8px 12px',
+            backgroundColor: 'var(--bg-tertiary)',
+            borderRadius: 'var(--radius-md)',
+            border: '1px solid var(--border)',
+            fontSize: '13px',
+            color: 'var(--text-secondary)'
+          }}
+        >
+          <span>
+            🔍 跨月份全域搜尋「<strong>{keyword}</strong>」：共找到 {filtered.length} 筆交易
+          </span>
+          <button
+            onClick={() => setKeyword('')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--primary)',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600
+            }}
+          >
+            清除搜尋
+          </button>
+        </div>
+      )}
 
       {/* 按日期分組的交易清單 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>

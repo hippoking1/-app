@@ -13,6 +13,7 @@ import { calculateNextBillingDate, POPULAR_SUBSCRIPTION_PRESETS, SubscriptionPre
 import { v4 as uuidv4 } from 'uuid';
 import { format, addMonths, parseISO } from 'date-fns';
 import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock } from 'lucide-react';
+import { hapticSuccess } from '@/utils/haptics';
 
 interface TransactionFormProps {
   initialData?: Partial<Transaction>;
@@ -72,6 +73,24 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const isCreditCard = selectedAccount?.type === 'credit_card';
   const canUseInstallment = type === 'expense' && isCreditCard;
   const canUseSubscription = type === 'expense' && isCreditCard;
+
+  // 預先計算並快取帳戶選單標籤，避免每次輸入觸發 O(帳戶數 × 交易數) 重複迴圈
+  const accountOptions = useMemo(() => {
+    return accounts.map((a) => {
+      let labelSuffix = `$${Math.round(a.balance).toLocaleString()}`;
+      if (a.type === 'cash' && a.balance === 0) {
+        const cashUsage = calculateCashWalletUsage(a, transactions);
+        labelSuffix = `純額度 / 本月已用 $${Math.round(cashUsage.currentMonthSpent).toLocaleString()}`;
+      } else if (a.type === 'credit_card') {
+        const cardUsage = calculateCreditCardUsage(a, transactions);
+        labelSuffix = `本期已用 $${Math.round(cardUsage.usedAmount).toLocaleString()}`;
+      }
+      return {
+        value: a.id,
+        label: `${a.name} (${labelSuffix})`
+      };
+    });
+  }, [accounts, transactions]);
 
   // 訂閱下次扣款預覽日期
   const previewNextBilling = useMemo(() => {
@@ -246,6 +265,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         }
 
         await addInstallmentTransactions(installmentTxs);
+        hapticSuccess();
         clearDraft();
         addToast({
           type: 'success',
@@ -309,6 +329,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           await addTransaction(initialTx);
         }
 
+        hapticSuccess();
         clearDraft();
         addToast({
           type: 'success',
@@ -339,6 +360,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       }
 
       await addTransaction(transaction);
+      hapticSuccess();
       clearDraft();
       addToast({ type: 'success', message: '記帳已儲存！' });
       if (onSuccess) onSuccess();
@@ -422,6 +444,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           </span>
           <input
             type="number"
+            inputMode="decimal"
             step="any"
             value={amount}
             onChange={(e) => handleAmountChange(e.target.value)}
@@ -523,20 +546,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           label={type === 'transfer' ? '轉出帳戶' : '帳戶'}
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          options={accounts.map((a) => {
-            let labelSuffix = `$${Math.round(a.balance).toLocaleString()}`;
-            if (a.type === 'cash' && a.balance === 0) {
-              const cashUsage = calculateCashWalletUsage(a, transactions);
-              labelSuffix = `純額度 / 本月已用 $${Math.round(cashUsage.currentMonthSpent).toLocaleString()}`;
-            } else if (a.type === 'credit_card') {
-              const cardUsage = calculateCreditCardUsage(a, transactions);
-              labelSuffix = `本期已用 $${Math.round(cardUsage.usedAmount).toLocaleString()}`;
-            }
-            return {
-              value: a.id,
-              label: `${a.name} (${labelSuffix})`
-            };
-          })}
+          options={accountOptions}
         />
 
         {type === 'transfer' && (
@@ -546,22 +556,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             onChange={(e) => setTransferToAccountId(e.target.value)}
             options={[
               { value: '', label: '請選擇目標帳戶' },
-              ...accounts
-                .filter((a) => a.id !== accountId)
-                .map((a) => {
-                  let labelSuffix = `$${Math.round(a.balance).toLocaleString()}`;
-                  if (a.type === 'cash' && a.balance === 0) {
-                    const cashUsage = calculateCashWalletUsage(a, transactions);
-                    labelSuffix = `純額度 / 本月已用 $${Math.round(cashUsage.currentMonthSpent).toLocaleString()}`;
-                  } else if (a.type === 'credit_card') {
-                    const cardUsage = calculateCreditCardUsage(a, transactions);
-                    labelSuffix = `本期已用 $${Math.round(cardUsage.usedAmount).toLocaleString()}`;
-                  }
-                  return {
-                    value: a.id,
-                    label: `${a.name} (${labelSuffix})`
-                  };
-                })
+              ...accountOptions.filter((opt) => opt.value !== accountId)
             ]}
           />
         )}

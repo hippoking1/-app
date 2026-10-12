@@ -1,10 +1,14 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, TrendingUp, WalletCards, Plus } from 'lucide-react';
+import React, { useRef } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, ReceiptText, TrendingUp, WalletCards, Plus, Sparkles } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
+import { hapticLight, hapticMedium } from '@/utils/haptics';
 
 export const BottomNav: React.FC = () => {
-  const { setTransactionModalOpen } = useAppStore();
+  const setTransactionModalOpen = useAppStore((s) => s.setTransactionModalOpen);
+  const navigate = useNavigate();
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isLongPress = useRef(false);
 
   const navItems = [
     { to: '/', label: '總覽', icon: LayoutDashboard },
@@ -13,6 +17,31 @@ export const BottomNav: React.FC = () => {
     { to: '/accounts', label: '帳戶', icon: WalletCards }
   ];
 
+  const handleFabClick = () => {
+    if (isLongPress.current) {
+      isLongPress.current = false;
+      return;
+    }
+    hapticLight();
+    setTransactionModalOpen(true);
+  };
+
+  const handleTouchStart = () => {
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      hapticMedium();
+      navigate('/ai');
+    }, 550);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   return (
     <div
       style={{
@@ -20,7 +49,7 @@ export const BottomNav: React.FC = () => {
         bottom: 0,
         left: 0,
         right: 0,
-        height: 'var(--bottom-nav-height)',
+        height: 'var(--bottom-nav-height, 64px)',
         backgroundColor: 'var(--bg-glass-heavy)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
@@ -33,82 +62,103 @@ export const BottomNav: React.FC = () => {
         paddingBottom: 'env(safe-area-inset-bottom, 0)'
       }}
     >
-      {/* 前兩項 */}
+      {/* 前兩項 (總覽、明細) */}
       {navItems.slice(0, 2).map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={() => hapticLight()}
             style={({ isActive }) => ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '4px',
+              minHeight: '48px',
+              gap: '3px',
               textDecoration: 'none',
               color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: isActive ? 700 : 500,
               flex: 1,
-              padding: '6px 0',
-              transition: 'color 0.2s'
+              padding: '4px 0',
+              transition: 'color 0.2s',
+              touchAction: 'manipulation'
             })}
           >
-            <Icon size={20} />
+            <Icon size={21} />
             <span>{item.label}</span>
           </NavLink>
         );
       })}
 
-      {/* 中央凸起快速新增按鈕 */}
-      <div style={{ position: 'relative', top: '-14px', flex: 1, display: 'flex', justifyContent: 'center' }}>
+      {/* 中央 FAB 記一筆（點擊：快速新增記帳 / 長按：進入 AI 記帳） */}
+      <div
+        style={{
+          position: 'relative',
+          top: '-16px',
+          flex: 1,
+          display: 'flex',
+          justifyContent: 'center'
+        }}
+      >
         <button
-          onClick={() => setTransactionModalOpen(true)}
+          onClick={handleFabClick}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+          onMouseDown={handleTouchStart}
+          onMouseUp={handleTouchEnd}
+          aria-label="快速記一筆（長按開啟 AI 記帳）"
+          title="點擊：快速記帳 / 長按：AI 記帳"
           style={{
-            width: '52px',
-            height: '52px',
-            borderRadius: 'var(--radius-full)',
+            width: '54px',
+            height: '54px',
+            borderRadius: '50%',
             background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
             border: '4px solid var(--bg-primary)',
             color: '#ffffff',
-            boxShadow: '0 8px 20px rgba(99, 102, 241, 0.45)',
+            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+            transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+            touchAction: 'manipulation'
           }}
-          onMouseDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
-          onMouseUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          onPointerDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+          onPointerUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <Plus size={26} strokeWidth={2.5} />
+          <Plus size={28} strokeWidth={2.5} />
         </button>
       </div>
 
-      {/* 後三項 */}
+      {/* 後兩項 (股票、帳戶) */}
       {navItems.slice(2).map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={() => hapticLight()}
             style={({ isActive }) => ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '4px',
+              minHeight: '48px',
+              gap: '3px',
               textDecoration: 'none',
               color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: isActive ? 700 : 500,
               flex: 1,
-              padding: '6px 0',
-              transition: 'color 0.2s'
+              padding: '4px 0',
+              transition: 'color 0.2s',
+              touchAction: 'manipulation'
             })}
           >
-            <Icon size={20} />
+            <Icon size={21} />
             <span>{item.label}</span>
           </NavLink>
         );
@@ -116,3 +166,4 @@ export const BottomNav: React.FC = () => {
     </div>
   );
 };
+

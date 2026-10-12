@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { TransactionItem } from '@/components/transactions/TransactionItem';
-import { useAccounts, useTransactions, useCategories, useBudgets, useStockHoldings, useTotalNetWorth } from '@/hooks/useFirestore';
+import { useAccounts, useTransactions, useCategories, useBudgets, useStockHoldings, useTotalNetWorth, useSubscriptions } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/analytics';
 import { calculateBudgetStatuses, getDailyAllowance, isLivingExpense } from '@/utils/budget';
@@ -19,9 +19,11 @@ import {
   Target,
   ChevronRight,
   WalletCards,
-  Building2
+  Building2,
+  CalendarClock
 } from 'lucide-react';
 import { getSafeIcon } from '@/utils/iconHelper';
+import { parseISO, differenceInDays } from 'date-fns';
 
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -33,7 +35,21 @@ export const Dashboard: React.FC = () => {
   const { transactions: allTransactions } = useTransactions();
   const { budgets } = useBudgets();
   const { holdings } = useStockHoldings();
+  const { subscriptions } = useSubscriptions();
   const { totalNetWorth, cashTotal, stockTotalTWD } = useTotalNetWorth();
+
+  // 未來 7 天即將扣款的定期訂閱
+  const today = new Date();
+  const upcomingSubscriptions = subscriptions.filter((sub) => {
+    if (sub.status !== 'active' || !sub.nextBillingDate) return false;
+    try {
+      const billDate = parseISO(sub.nextBillingDate);
+      const diff = differenceInDays(billDate, today);
+      return diff >= 0 && diff <= 7;
+    } catch {
+      return false;
+    }
+  });
 
   // 本月生活收支計算 (自動排除投資股票交易)
   const categoryMap = React.useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
@@ -185,6 +201,49 @@ export const Dashboard: React.FC = () => {
         </Card>
       </div>
 
+      {/* 未來 7 天即將扣款訂閱卡片 */}
+      {upcomingSubscriptions.length > 0 && (
+        <Card glass padding="md" style={{ borderLeft: '4px solid var(--purple)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CalendarClock size={18} color="var(--purple)" />
+              <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                未來 7 天即將扣款訂閱 ({upcomingSubscriptions.length} 筆)
+              </span>
+            </div>
+            <button
+              onClick={() => navigate('/transactions')}
+              style={{ background: 'transparent', border: 'none', color: 'var(--primary-light)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+            >
+              查看明細
+            </button>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {upcomingSubscriptions.map((sub) => (
+              <div
+                key={sub.id}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border)',
+                  minWidth: '160px',
+                  flexShrink: 0
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{sub.name}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>{sub.nextBillingDate}</span>
+                  <span className="font-mono" style={{ fontWeight: 700, color: 'var(--expense)' }}>
+                    NT$ {sub.amount.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* 預算進度條區塊 */}
       {globalBudget && (
         <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -229,7 +288,7 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid-3">
+        <div className="grid-3" style={{ overflowX: 'auto', paddingBottom: '4px' }}>
           {accounts.map((acc) => {
             const IconComponent = getSafeIcon(acc.icon, Building2);
             let displayLabel = '';

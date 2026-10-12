@@ -68,6 +68,12 @@
   --bp-tablet: 768px;
   --bp-desktop: 1200px;
   
+  /* 語意 Tokens (CSS Modules 與元件通用) */
+  --surface-1: var(--bg-secondary);
+  --surface-2: var(--bg-tertiary);
+  --surface-card: var(--bg-card);
+  --on-primary: #ffffff;
+
   /* 佈局容器 */
   --max-width: 1280px;
   --sidebar-width: 260px;
@@ -89,6 +95,11 @@
   --bg-card-hover: rgba(241, 245, 249, 0.9);
   --bg-glass: rgba(255, 255, 255, 0.75);
   --bg-glass-heavy: rgba(255, 255, 255, 0.95);
+
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-card: rgba(255, 255, 255, 0.85);
+  --on-primary: #ffffff;
   
   --text-primary: #0f172a;
   --text-secondary: #475569;

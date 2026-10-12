@@ -26,22 +26,29 @@
 - **現金錢包純已用額度模式**：支援「本月已使用額度」即時統計，每月 1 號自動歸零重計；當現金帳戶餘額設為 0 時，預設啟用「純已用額度模式」，記帳時不扣減餘額，避免未記錄提領收入時現金餘額持續累積為負數。
 - **帳戶轉帳**：支援帳戶間資金調撥，雙向自動扣補餘額。
 
-### 4. 📝 交易明細、快速編輯與一鍵撤銷 (Undo)
+### 4. 📝 交易明細、跨月全域搜尋與一鍵撤銷 (Undo)
+- **跨月份全域即時搜尋**：輸入關鍵字時自動啟動跨月份穿透搜尋，毫秒級列出歷史所有相符交易並標記筆數。
 - **交易快速編輯**：明細列表點擊即可直接修改金額、收支分類、帳戶與備忘，修改即時連動全域資產計算。
 - **刪除防呆與一鍵復原**：刪除紀錄後自動彈出 Toast 提供 5 秒「復原」按鈕，防止誤觸丟失資料。
 
-### 5. 📊 視覺化預算與財務報表
+### 5. 📱 極致行動端體驗與原生手感 (Capacitor & PWA)
+- **FAB 多功能記帳按鈕**：底部中央按鈕點擊觸發輕微震動並彈出快速記帳；**長按（500ms）** 發出中度震動並直通 Gemini AI 語音/自然語言記帳。
+- **觸覺震動反饋 (Haptics)**：記帳儲存成功、點擊操作時觸發原生震動反饋，大幅增進操作實體回饋感。
+- **Android 實體返回鍵智能攔截**：開啟 Modal / 表單時按實體返回鍵自動平滑關閉，無彈窗時正常返回上一頁或最小化 App。
+- **PWA 高解析安裝支援**：內建完整 192x192、512x512 及 Apple Touch Icon，隨時加入手機桌面免裝檔運行。
+
+### 6. 📊 視覺化預算與財務報表
 - **各類支出趨勢折線圖**：專注支出流向分析，以各消費類別（餐飲、交通、娛樂等）繪製獨立趨勢折線，深度洞察每類花費長週期變化。
 - **自由自訂顯示區間**：內建「近 3 個月」、「近 6 個月」、「近 1 年」、「今年以來 (YTD)」快捷切換，並支援自訂任意起始與結束月份跨度。
-- **互動式分類篩選**：點擊分類標籤即時切換開啟 / 隱藏折線，支援一鍵全選、重置前 5 大分類及總支出對照參考線。
+- **即將扣款訂閱雷達**：主頁自動掃描未來 7 天內即將扣款之訂閱項目，防範帳戶扣款不及。
 - **智能懸浮 Tooltip**：懸浮圖表時自動依當月各類支出金額由大到小排序，精確標示金額與當月支出佔比（%）。
 - **分類預算與佔比**：設定每月/每類預算上限與超支進度提示，搭配當月分類佔比圓餅圖與每日花費柱狀圖。
 
-### 6. 🔒 集中資料同步與極致離線體驗
+### 7. ⚡ 極致效能架構與安全
+- **首包激瘦 750KB+**：Lucide Tree-shaking 精選圖庫（圖標包由 795KB 驟降至 36KB，減少 95%）、React 19 路由 `React.lazy` 動態分割。
 - **單一全域集中資料層 (Single DataStore)**：集中管理 6 大集合監聽，相比傳統各元件獨立監聽大幅節省 60%+ Firestore 讀取量。
-- **IndexedDB 多分頁持久快取**：啟用 `persistentLocalCache` 與 `persistentMultipleTabManager`，離線秒開、跨分頁秒同步，連線中斷仍可無痛記帳，恢復時自動雙向同步。
-- **Google 快速登入**：支援一鍵 Google 授權登入；匿名登入無痛體驗並隨時升級綁定。
-- **PWA 與原生容器**：支援手機（iOS/Android）與電腦（Chrome/Edge）安裝為獨立原生 App。
+- **CSS Modules 樣式架構**：高頻元件遷移至 CSS Modules，徹底消除 JS 模擬 hover 的 CPU 負載。
+- **後端安全 Token 驗證**：GAS 請求整合 Firebase Auth ID Token；Firestore Rules 強化金額正數與交易型態校驗。
 
 ---
 
@@ -49,11 +56,13 @@
 
 | 領域 | 技術選型 |
 | :--- | :--- |
-| **前端核心** | React 19、TypeScript、Vite 6、HashRouter |
+| **前端核心** | React 19、TypeScript、Vite 6、HashRouter、React.lazy |
 | **狀態與快取** | Zustand 5、Single DataStore、IndexedDB (Firestore Cache) |
+| **樣式架構** | CSS Modules、Glassmorphism 深色/淺色主題、語意 Tokens |
+| **原生體驗** | Capacitor 8 (@capacitor/app, @capacitor/haptics)、PWA |
 | **單元測試** | Vitest（餘額運算、信用卡週期、生活支出過濾測試） |
-| **圖表與視覺** | Recharts、Lucide React、Glassmorphism 深色/淺色主題 |
-| **後端代理** | Google Apps Script (GAS) Web App |
+| **圖表與視覺** | Recharts、Lucide React (Curated Tree-shaking) |
+| **後端代理** | Google Apps Script (GAS) Web App + Firebase Auth ID Token |
 | **AI 模型** | Google Gemini 3.7 Flash API |
 | **金融報價** | Yahoo Finance v8 API + 全球即時 Search API |
 | **資料庫 & 認證**| Firebase Authentication + Cloud Firestore |
