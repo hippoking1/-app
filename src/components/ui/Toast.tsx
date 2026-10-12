@@ -66,20 +66,43 @@ export const ToastContainer: React.FC = () => {
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                padding: '4px',
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <X size={16} />
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {toast.action && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toast.action?.onClick();
+                    removeToast(toast.id);
+                  }}
+                  style={{
+                    backgroundColor: 'var(--primary-glow)',
+                    border: '1px solid var(--border-focus)',
+                    color: 'var(--primary-light)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '4px 8px',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
+              <button
+                onClick={() => removeToast(toast.id)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
         );
       })}

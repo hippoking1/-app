@@ -19,23 +19,29 @@
 
 ### 3. 💳 多帳戶與信用卡額度管理
 - 支援現金、銀行活存、悠遊卡、電子支付與信用卡。
+- **衍生即時餘額引擎**：帳戶餘額以基準餘額 + 交易流水分層動態精準計算，修正信用卡本期已刷未出帳 vs. 繳款沖銷歷史欠款邏輯，生活支出排除投資買賣。
 - **信用卡分期付款功能**：支出紀錄選擇信用卡時，支援一鍵開啟「分期付款」，可選擇 3、6、12、24 期或自訂期數（2~60 期）。系統自動依總金額試算每期應繳款（除不盡金額自動補入首期），並依月依序產生各期扣款明細，完美連動當期帳單週期結帳、額度佔用與跨月預算。
-- **信用卡定期訂閱扣款功能**：支援在支出記帳時開啟「信用卡定期訂閱付款」，可設定扣款頻率（每月/每年/每週）、指定扣款日（每月 1~31 號）與首期扣款，內建常見熱門範本（Netflix、Spotify、ChatGPT Plus、YouTube Premium、iCloud 等）。系統會在指定時間於背景自行紀錄支出並計入信用卡帳單；提供專屬「信用卡訂閱管理」面板，可隨時取消訂閱以停止自動紀錄扣款、恢復訂閱或手動補記本期。
+- **信用卡定期訂閱扣款功能（冪等化防重複扣款）**：支援在支出記帳時開啟「信用卡定期訂閱付款」，可設定扣款頻率（每月/每年/每週）、指定扣款日（每月 1~31 號）與首期扣款，內建常見熱門範本（Netflix、Spotify、ChatGPT Plus 等）。具備確定性交易 ID，杜絕多視窗或多裝置重複扣款。
 - **信用卡結帳日與額度週期自動重算**：支援設定每張信用卡之「帳單結帳日（每月 1~31 號）」，結帳日後系統自動將已刷未出帳額度歸零重新計算下一期，並即時展示當期帳單週期、剩餘結帳天數、已用額度、可用餘額與百分比進度條。
 - **現金錢包純已用額度模式**：支援「本月已使用額度」即時統計，每月 1 號自動歸零重計；當現金帳戶餘額設為 0 時，預設啟用「純已用額度模式」，記帳時不扣減餘額，避免未記錄提領收入時現金餘額持續累積為負數。
 - **帳戶轉帳**：支援帳戶間資金調撥，雙向自動扣補餘額。
 
-### 4. 📊 視覺化預算與財務報表
+### 4. 📝 交易明細、快速編輯與一鍵撤銷 (Undo)
+- **交易快速編輯**：明細列表點擊即可直接修改金額、收支分類、帳戶與備忘，修改即時連動全域資產計算。
+- **刪除防呆與一鍵復原**：刪除紀錄後自動彈出 Toast 提供 5 秒「復原」按鈕，防止誤觸丟失資料。
+
+### 5. 📊 視覺化預算與財務報表
 - **各類支出趨勢折線圖**：專注支出流向分析，以各消費類別（餐飲、交通、娛樂等）繪製獨立趨勢折線，深度洞察每類花費長週期變化。
 - **自由自訂顯示區間**：內建「近 3 個月」、「近 6 個月」、「近 1 年」、「今年以來 (YTD)」快捷切換，並支援自訂任意起始與結束月份跨度。
 - **互動式分類篩選**：點擊分類標籤即時切換開啟 / 隱藏折線，支援一鍵全選、重置前 5 大分類及總支出對照參考線。
 - **智能懸浮 Tooltip**：懸浮圖表時自動依當月各類支出金額由大到小排序，精確標示金額與當月支出佔比（%）。
 - **分類預算與佔比**：設定每月/每類預算上限與超支進度提示，搭配當月分類佔比圓餅圖與每日花費柱狀圖。
 
-### 5. 🔒 雲端同步與帳號安全
-- **Firebase Firestore 即時資料庫**：跨裝置毫秒級雙向同步。
-- **Google 快速登入**：支援一鍵 Google 授權登入；訪客無痛體驗並隨時升級綁定。
-- **PWA 支援**：支援手機（iOS/Android）與電腦（Chrome/Edge）安裝為獨立原生 App。
+### 6. 🔒 集中資料同步與極致離線體驗
+- **單一全域集中資料層 (Single DataStore)**：集中管理 6 大集合監聽，相比傳統各元件獨立監聽大幅節省 60%+ Firestore 讀取量。
+- **IndexedDB 多分頁持久快取**：啟用 `persistentLocalCache` 與 `persistentMultipleTabManager`，離線秒開、跨分頁秒同步，連線中斷仍可無痛記帳，恢復時自動雙向同步。
+- **Google 快速登入**：支援一鍵 Google 授權登入；匿名登入無痛體驗並隨時升級綁定。
+- **PWA 與原生容器**：支援手機（iOS/Android）與電腦（Chrome/Edge）安裝為獨立原生 App。
 
 ---
 
@@ -44,13 +50,14 @@
 | 領域 | 技術選型 |
 | :--- | :--- |
 | **前端核心** | React 19、TypeScript、Vite 6、HashRouter |
-| **狀態管理** | Zustand 5、date-fns、uuid |
+| **狀態與快取** | Zustand 5、Single DataStore、IndexedDB (Firestore Cache) |
+| **單元測試** | Vitest（餘額運算、信用卡週期、生活支出過濾測試） |
 | **圖表與視覺** | Recharts、Lucide React、Glassmorphism 深色/淺色主題 |
 | **後端代理** | Google Apps Script (GAS) Web App |
 | **AI 模型** | Google Gemini 3.7 Flash API |
 | **金融報價** | Yahoo Finance v8 API + 全球即時 Search API |
 | **資料庫 & 認證**| Firebase Authentication + Cloud Firestore |
-| **部署發布** | GitHub Pages、Vite PWA (Workbox) |
+| **部署發布** | GitHub Pages、Firebase CLI、Vite PWA (Workbox) |
 
 ---
 
@@ -65,7 +72,7 @@
    - 前往「設定」➔「已授權網域」，新增你的 GitHub Pages 網域（例如：`hippoking1.github.io`）。
 3. **啟用 Cloud Firestore (資料庫)**：
    - 點擊左側「Firestore Database」➔「建立資料庫」➔ 選擇伺服器位置（建議 `asia-east1` 台灣）。
-   - 在「規則」頁籤貼入以下安全規則並發布：
+   - 可在「規則」頁籤貼入以下安全規則，或在本專案直接使用 Firebase CLI 部署（見下方說明）：
      ```javascript
      rules_version = '2';
      service cloud.firestore {
@@ -75,6 +82,10 @@
          }
        }
      }
+     ```
+   - **一鍵部署規則（推薦）**：
+     ```bash
+     npm run deploy:rules
      ```
 4. **取得 Web 應用程式配置**：
    - 點擊專案首頁齒輪圖示「專案設定」➔「您的應用程式」➔ 點擊 Web 圖示 `</>`。
@@ -137,7 +148,12 @@
    VITE_GAS_DEPLOYMENT_URL=https://script.google.com/macros/s/你的_DEPLOYMENT_ID/exec
    ```
 
-4. 啟動本機開發伺服器：
+4. 執行單元測試（餘額運算、信用卡週期、扣款邏輯）：
+   ```bash
+   npm test
+   ```
+
+5. 啟動本機開發伺服器：
    ```bash
    npm run dev
    ```
@@ -221,15 +237,19 @@
 │   │   ├── common/           # 全域 ErrorBoundary 等通用防護元件
 │   │   ├── layout/           # 側邊欄、頂部列、底部導航與 AppShell
 │   │   ├── stocks/           # 股票持倉卡、Yahoo 搜尋彈窗與建倉表單
-│   │   ├── transactions/     # 記帳清單、分類選擇器與快速表單
-│   │   └── ui/               # 按鈕、卡片、彈窗、輸入框等基礎 UI 元件
+│   │   ├── transactions/     # 記帳清單、分類選擇器、快速表單與編輯 Modal
+│   │   └── ui/               # 按鈕、卡片、彈窗、輸入框、Toast (支援 Undo) 等
 │   ├── hooks/                # Firestore 監聽與股票查詢 Custom Hooks
-│   ├── lib/                  # Firebase SDK 初始化配置
+│   ├── lib/                  # Firebase SDK 初始化與持久離線快取配置
 │   ├── pages/                # 儀表板、明細、帳戶、預算、股票、AI、設定等頁面
 │   ├── services/             # Auth、Firestore、GAS 呼叫模組與種子資料
-│   ├── stores/               # Zustand 全域狀態管理 (認證、主題、Modal)
+│   ├── stores/               # Zustand 狀態管理 (認證、主題、全域集中 DataStore)
 │   ├── types/                # TypeScript 財務與股票型別定義
-│   └── utils/                # 財務計算、圖示解析、防禦性計算工具
+│   └── utils/                # 餘額即時引擎 (balances)、財務計算、防禦性工具
+├── tests/                    # Vitest 單元測試 (餘額演算、信用卡週期沖銷)
+├── .firebaserc               # Firebase 專案綁定配置
+├── firebase.json             # Firebase Firestore 規則與配置
+├── firestore.rules           # Cloud Firestore 安全存取規則
 ├── .env.example              # 環境變數範本
 ├── package.json              # 專案相依套件與指令設定
 └── vite.config.ts            # Vite 與 PWA 配置

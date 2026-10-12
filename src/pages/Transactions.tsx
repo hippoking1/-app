@@ -6,9 +6,11 @@ import { Select } from '@/components/ui/Select';
 import { TransactionItem } from '@/components/transactions/TransactionItem';
 import { useTransactions, useCategories, useAccounts, useSubscriptions } from '@/hooks/useFirestore';
 import { SubscriptionManagerModal } from '@/components/subscriptions/SubscriptionManagerModal';
+import { Modal } from '@/components/ui/Modal';
+import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/analytics';
-import { TransactionType } from '@/types';
+import { Transaction, TransactionType } from '@/types';
 import { format, subMonths, addMonths, parseISO } from 'date-fns';
 import { Search, Plus, ChevronLeft, ChevronRight, Filter, Repeat } from 'lucide-react';
 
@@ -24,6 +26,7 @@ export const Transactions: React.FC = () => {
   const [selectedAccountId, setSelectedAccountId] = useState('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
 
   const activeSubsCount = subscriptions.filter((s) => s.status === 'active').length;
 
@@ -226,6 +229,7 @@ export const Transactions: React.FC = () => {
                   category={categoryMap.get(tx.categoryId)}
                   account={accountMap.get(tx.accountId)}
                   targetAccount={tx.transferToAccountId ? accountMap.get(tx.transferToAccountId) : undefined}
+                  onEdit={(item) => setEditingTx(item)}
                 />
               ))}
             </div>
@@ -238,6 +242,21 @@ export const Transactions: React.FC = () => {
           </Card>
         )}
       </div>
+
+      {/* 編輯交易記錄 Modal */}
+      <Modal
+        isOpen={Boolean(editingTx)}
+        onClose={() => setEditingTx(null)}
+        title="✏️ 編輯交易明細"
+      >
+        {editingTx && (
+          <TransactionForm
+            initialData={editingTx}
+            onSuccess={() => setEditingTx(null)}
+            onCancel={() => setEditingTx(null)}
+          />
+        )}
+      </Modal>
 
       {/* 信用卡定期訂閱服務管理 Modal */}
       <SubscriptionManagerModal

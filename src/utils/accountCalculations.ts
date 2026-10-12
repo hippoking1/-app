@@ -105,17 +105,28 @@ export function calculateCreditCardUsage(
     })
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  // 判斷是否曾有過交易紀錄；若本期無交易且帳戶餘額為負數且歷史無任何交易，以手動輸入餘額備援
-  const hasAnyTx = (transactions || []).some(
-    (t) => t && (t.accountId === account.id || t.transferToAccountId === account.id)
-  );
-  let usedAmount = Math.max(0, expenses - incomes - payments);
+  // 本期未出帳消費 (扣除本期刷退)
+  const unbilledExpenses = Math.max(0, expenses - incomes);
 
-  if (!hasAnyTx && account.balance !== 0) {
-    usedAmount = Math.abs(account.balance);
+  // 統計所有歷史欠款與繳款 (計算總佔用額度)
+  const allCardTxs = (transactions || []).filter((t) => t && (t.accountId === account.id || t.transferToAccountId === account.id));
+  const totalHistoricalExpense = allCardTxs
+    .filter((t) => t.accountId === account.id && t.type === 'expense')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  const totalHistoricalRefund = allCardTxs
+    .filter((t) => t.accountId === account.id && t.type === 'income')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  const totalHistoricalPayment = allCardTxs
+    .filter((t) => t.transferToAccountId === account.id && t.type === 'transfer')
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+
+  // 總未繳清欠款
+  let netBalanceDue = totalHistoricalExpense - totalHistoricalRefund - totalHistoricalPayment;
+  if (allCardTxs.length === 0 && account.balance !== 0) {
+    netBalanceDue = Math.abs(account.balance);
   }
 
-  // 統計未到期的未來分期/支出款項 (日期在 cycleEnd 之後)，用於精確計算信用卡剩餘額度
+  // 統計未到期的未來分期/支出款項 (日期在 cycleEnd 之後)
   const futureInstallments = (transactions || [])
     .filter((t) => {
       if (!t || t.accountId !== account.id || !t.date || t.type !== 'expense') return false;
@@ -124,7 +135,11 @@ export function calculateCreditCardUsage(
     })
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
-  const totalOccupiedLimit = usedAmount + futureInstallments;
+  // 本期已刷金額：以本期未出帳為主
+  const usedAmount = unbilledExpenses;
+
+  // 總佔用額度 (包含已出帳未繳、本期已刷及未來分期)
+  const totalOccupiedLimit = Math.max(0, Math.max(usedAmount, netBalanceDue) + futureInstallments);
   const creditLimit = Number(account.creditLimit) || 0;
   const availableLimit = Math.max(0, creditLimit - totalOccupiedLimit);
   const usagePercent = creditLimit > 0 ? parseFloat(((totalOccupiedLimit / creditLimit) * 100).toFixed(1)) : 0;

@@ -1,15 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useAppStore } from '@/stores/appStore';
-import {
-  subscribeAccounts,
-  subscribeCategories,
-  subscribeTransactions,
-  subscribeBudgets,
-  subscribeStockHoldings,
-  subscribeSubscriptions,
-  processDueSubscriptions,
-  initializeUserData
-} from '@/services/firestore';
+import { useDataStore, startDataSync } from '@/stores/dataStore';
+import { computeBalances, computeTotalNetWorth } from '@/utils/balances';
+import { processDueSubscriptions } from '@/services/firestore';
 import {
   Account,
   Category,
@@ -20,228 +13,134 @@ import {
 } from '@/types';
 
 /**
- * 監聽並取得當前使用者所有帳戶
+ * 全域資料即時同步 Hook (掛載在 AppShell)
  */
-export function useAccounts() {
+export function useGlobalDataSync() {
   const userId = useAppStore((state) => state.user?.uid);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!userId) {
-      setAccounts([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    // 初始化使用者預設資料 (僅在未初始化時執行)
-    initializeUserData(userId).catch(console.error);
-
-    const unsubscribe = subscribeAccounts(userId, (data) => {
-      // 強制依名稱唯一去重
-      const uniqueAccs = Array.from(new Map(data.map((a) => [a.name, a])).values());
-      setAccounts(uniqueAccs);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]); // 使用穩定字串 userId，杜絕 User 物件引用變更導致的重新載入
-
-  return { accounts, loading };
+    if (!userId) return;
+    const stopSync = startDataSync(userId);
+    return () => {
+      stopSync();
+    };
+  }, [userId]);
 }
 
 /**
- * 監聽並取得分類列表
+ * 取得當前使用者所有帳戶 (含衍生即時餘額)
+ */
+export function useAccounts() {
+  const rawAccounts = useDataStore((state) => state.accounts);
+  const transactions = useDataStore((state) => state.transactions);
+  const loading = useDataStore((state) => state.loading.accounts);
+
+  const balanceMap = useMemo(() => computeBalances(rawAccounts, transactions), [rawAccounts, transactions]);
+
+  const accounts = useMemo(() => {
+    return rawAccounts.map((acc) => ({
+      ...acc,
+      balance: balanceMap.get(acc.id) ?? acc.balance ?? 0
+    }));
+  }, [rawAccounts, balanceMap]);
+
+  return { accounts, loading, balanceMap };
+}
+
+/**
+ * 取得分類列表
  */
 export function useCategories(type?: 'expense' | 'income') {
-  const userId = useAppStore((state) => state.user?.uid);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
+  const allCategories = useDataStore((state) => state.categories);
+  const loading = useDataStore((state) => state.loading.categories);
 
-  useEffect(() => {
-    if (!userId) {
-      setCategories([]);
-      setLoading(false);
-      return;
+  const categories = useMemo(() => {
+    if (type) {
+      return allCategories.filter((c) => c.type === type);
     }
-
-    setLoading(true);
-    const unsubscribe = subscribeCategories(userId, (data) => {
-      // 強制依 (type + name) 唯一去重
-      const uniqueCats = Array.from(new Map(data.map((c) => [`${c.type}_${c.name}`, c])).values());
-      if (type) {
-        setCategories(uniqueCats.filter((c) => c.type === type));
-      } else {
-        setCategories(uniqueCats);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId, type]); // 使用穩定字串 userId
+    return allCategories;
+  }, [allCategories, type]);
 
   return { categories, loading };
 }
 
 /**
- * 監聽並取得交易清單 (支援月份或帳戶過濾)
+ * 取得交易清單 (支援月份或帳戶過濾)
  */
 export function useTransactions(options?: { accountId?: string; month?: string }) {
-  const userId = useAppStore((state) => state.user?.uid);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const allTransactions = useDataStore((state) => state.transactions);
+  const loading = useDataStore((state) => state.loading.transactions);
 
   const accountId = options?.accountId;
   const month = options?.month;
 
-  useEffect(() => {
-    if (!userId) {
-      setTransactions([]);
-      setLoading(false);
-      return;
+  const transactions = useMemo(() => {
+    let filtered = allTransactions;
+
+    if (accountId && accountId !== 'all') {
+      filtered = filtered.filter(
+        (t) => t.accountId === accountId || t.transferToAccountId === accountId
+      );
     }
 
-    setLoading(true);
-    const unsubscribe = subscribeTransactions(userId, (data) => {
-      let filtered = data;
+    if (month) {
+      filtered = filtered.filter((t) => t.date && t.date.replace(/\//g, '-').startsWith(month));
+    }
 
-      if (accountId && accountId !== 'all') {
-        filtered = filtered.filter(
-          (t) => t.accountId === accountId || t.transferToAccountId === accountId
-        );
-      }
-
-      if (month) {
-        filtered = filtered.filter((t) => t.date && t.date.replace(/\//g, '-').startsWith(month));
-      }
-
-      setTransactions(filtered);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId, accountId, month]); // 使用穩定原始型別依賴
+    return filtered;
+  }, [allTransactions, accountId, month]);
 
   return { transactions, loading };
 }
 
 /**
- * 監聽並取得預算設定
+ * 取得預算設定
  */
 export function useBudgets() {
-  const userId = useAppStore((state) => state.user?.uid);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userId) {
-      setBudgets([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const unsubscribe = subscribeBudgets(userId, (data) => {
-      setBudgets(data);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
+  const budgets = useDataStore((state) => state.budgets);
+  const loading = useDataStore((state) => state.loading.budgets);
 
   return { budgets, loading };
 }
 
 /**
- * 監聽並取得股票持倉
+ * 取得股票持倉明細
  */
 export function useStockHoldings() {
-  const userId = useAppStore((state) => state.user?.uid);
-  const [holdings, setHoldings] = useState<StockHolding[]>([]);
-  const [loading, setLoading] = useState(true);
+  const holdings = useDataStore((state) => state.holdings);
+  const loading = useDataStore((state) => state.loading.holdings);
 
-  useEffect(() => {
-    if (!userId) {
-      setHoldings([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const unsubscribe = subscribeStockHoldings(userId, (data) => {
-      const safeData = Array.isArray(data) ? data : [];
-      setHoldings(safeData);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
-
-  return { holdings: Array.isArray(holdings) ? holdings : [], loading };
+  return { holdings, loading };
 }
 
 /**
- * 計算全域總資產 (帳戶餘額加總 + 股票總市值)
+ * 計算全域總資產 (帳戶即時餘額 + 股票總市值)
  */
-export function useTotalNetWorth() {
-  const { accounts } = useAccounts();
-  const { holdings } = useStockHoldings();
+export function useTotalNetWorth(usdRate = 32.5) {
+  const rawAccounts = useDataStore((state) => state.accounts);
+  const transactions = useDataStore((state) => state.transactions);
+  const holdings = useDataStore((state) => state.holdings);
 
-  // 現金與帳戶資產 (若為純額度模式或負餘額的現金錢包，不扣減淨資產)
-  const cashTotal = accounts
-    .filter((a) => !a.isArchived)
-    .reduce((sum, a) => {
-      if (a.type === 'cash' && a.balance <= 0) {
-        return sum;
-      }
-      return sum + (a.balance || 0);
-    }, 0);
+  const balanceMap = useMemo(() => computeBalances(rawAccounts, transactions), [rawAccounts, transactions]);
 
-  // 股票市值 (台幣 1:1, 美元按 32.5 換算)
-  const stockTotalTWD = holdings.reduce((sum, h) => {
-    const rate = h.market === 'US' || h.currency === 'USD' ? 32.5 : 1;
-    const value = (h.shares || 0) * (h.currentPrice || h.avgCost || 0);
-    return sum + value * rate;
-  }, 0);
-
-  return {
-    totalNetWorth: cashTotal + stockTotalTWD,
-    cashTotal,
-    stockTotalTWD
-  };
+  return useMemo(() => {
+    return computeTotalNetWorth(rawAccounts, holdings, balanceMap, usdRate);
+  }, [rawAccounts, holdings, balanceMap, usdRate]);
 }
 
 /**
- * 監聽並取得使用者之信用卡定期訂閱清單
+ * 取得信用卡定期訂閱清單
  */
 export function useSubscriptions() {
-  const userId = useAppStore((state) => state.user?.uid);
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!userId) {
-      setSubscriptions([]);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const unsubscribe = subscribeSubscriptions(userId, (data) => {
-      setSubscriptions(Array.isArray(data) ? data : []);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
+  const subscriptions = useDataStore((state) => state.subscriptions);
+  const loading = useDataStore((state) => state.loading.subscriptions);
 
   return { subscriptions, loading };
 }
 
 /**
  * 自動排程檢查器：自動偵測並執行已到期的信用卡定期訂閱扣款
- * 具備視窗焦點回歸、防重複執行、定時輪巡機制
+ * 具備視窗焦點回歸、防重複執行、定時輪巡機制，已修復 memory leak 與重複扣款
  */
 export function useSubscriptionAutoProcessor() {
   const userId = useAppStore((state) => state.user?.uid);
@@ -276,20 +175,21 @@ export function useSubscriptionAutoProcessor() {
 
     // 2. 視窗切換回前景或可見時檢查
     const handleFocus = () => runProcessor();
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         runProcessor();
       }
-    });
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibility);
 
     // 3. 定時每 30 分鐘背景輪巡檢查
     const timer = setInterval(runProcessor, 30 * 60 * 1000);
 
     return () => {
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearInterval(timer);
     };
   }, [userId, addToast]);
 }
-

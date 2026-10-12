@@ -85,7 +85,19 @@ export function isInvestmentTransaction(
 }
 
 /**
- * 計算各項預算在指定月份的使用狀況與超支狀態 (自動排除投資相關及股票買賣)
+ * 判斷是否為一般生活支出 (排除投資、股票交易或自訂排除)
+ */
+export function isLivingExpense(
+  t: Transaction,
+  categories?: Category[] | Map<string, Category>
+): boolean {
+  if (!t || t.type !== 'expense') return false;
+  if (t.excludeFromBudget) return false;
+  return !isInvestmentTransaction(t, categories);
+}
+
+/**
+ * 計算各項預算在指定月份/週期的使用狀況與超支狀態 (自動排除投資相關及股票買賣)
  */
 export function calculateBudgetStatuses(
   budgets: Budget[] = [],
@@ -94,29 +106,40 @@ export function calculateBudgetStatuses(
   monthStr: string
 ): BudgetStatus[] {
   const targetMonth = monthStr.replace('/', '-');
+  const targetYear = targetMonth.slice(0, 4);
 
   const categoryMap = new Map<string, Category>();
   (categories || []).forEach((c) => {
     if (c && c.id) categoryMap.set(c.id, c);
   });
 
-  // 預算管理中，排除投資相關及股票買賣交易
-  const monthTxs = (transactions || []).filter((t) => {
-    if (!t || t.type !== 'expense' || !t.date) return false;
-    if (getMonthKey(t.date) !== targetMonth) return false;
-    if (isInvestmentTransaction(t, categoryMap)) return false;
-    return true;
+  // 篩選生活支出
+  const validExpenses = (transactions || []).filter((t) => {
+    if (!t || !t.date) return false;
+    return isLivingExpense(t, categoryMap);
   });
 
   return (budgets || []).map((budget) => {
+    const period = budget.period || 'monthly';
+    
+    // 依預算週期篩選交易
+    const scopedTxs = validExpenses.filter((t) => {
+      const txDate = t.date.replace(/\//g, '-');
+      if (period === 'yearly') {
+        return txDate.startsWith(targetYear);
+      }
+      // weekly 暫時按月度同等折算或按當月計算
+      return txDate.slice(0, 7) === targetMonth;
+    });
+
     let spent = 0;
 
     if (!budget.categoryId) {
-      // 全域總預算：加總當月非投資生活支出
-      spent = monthTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+      // 全域總預算：加總非投資生活支出
+      spent = scopedTxs.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     } else {
       // 特定分類預算
-      spent = monthTxs
+      spent = scopedTxs
         .filter((t) => t.categoryId === budget.categoryId)
         .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     }

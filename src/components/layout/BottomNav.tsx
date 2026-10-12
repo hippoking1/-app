@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, Sparkles, TrendingUp, PieChart, Plus } from 'lucide-react';
+import { LayoutDashboard, ReceiptText, TrendingUp, WalletCards, Plus } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 
 export const BottomNav: React.FC = () => {
@@ -9,9 +9,8 @@ export const BottomNav: React.FC = () => {
   const navItems = [
     { to: '/', label: '總覽', icon: LayoutDashboard },
     { to: '/transactions', label: '明細', icon: ReceiptText },
-    { to: '/ai', label: 'AI記帳', icon: Sparkles },
     { to: '/stocks', label: '股票', icon: TrendingUp },
-    { to: '/analytics', label: '分析', icon: PieChart }
+    { to: '/accounts', label: '帳戶', icon: WalletCards }
   ];
 
   return (

@@ -26,19 +26,22 @@ interface GASResponse<T> {
  * 呼叫 Google Apps Script 後端通用方法
  */
 async function callGAS<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
-  if (!GAS_URL || GAS_URL.includes('your_deployment_id')) {
+  const isMockMode = !GAS_URL || GAS_URL.includes('your_deployment_id');
+
+  if (isMockMode) {
     console.warn(`[GAS] 尚未設定 VITE_GAS_DEPLOYMENT_URL，使用本機智慧模擬模式: ${action}`);
     return mockGASResponse<T>(action, payload);
   }
 
   try {
-    // 使用 text/plain 繞過瀏覽器 CORS preflight 限制
+    // 使用 text/plain 繞過瀏覽器 CORS preflight 限制，並設定 25 秒超時
     const response = await fetch(GAS_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
       },
-      body: JSON.stringify({ action, payload })
+      body: JSON.stringify({ action, payload }),
+      signal: AbortSignal.timeout(25000)
     });
 
     const responseText = await response.text();
@@ -52,15 +55,15 @@ async function callGAS<T>(action: string, payload: Record<string, unknown> = {})
     }
 
     const result: GASResponse<T> = JSON.parse(responseText);
-    if (!result.success && result.error) {
-      throw new Error(result.error);
+    if (!result.success) {
+      const errMsg = result.error || (result.data as any)?.error || 'GAS 後端執行失敗';
+      throw new Error(errMsg);
     }
 
     return result.data;
   } catch (err: any) {
     console.error(`[GAS Error] ${action}:`, err);
-    // 若網路出錯，回退至模擬模式以免畫面卡死
-    return mockGASResponse<T>(action, payload);
+    throw err;
   }
 }
 

@@ -7,7 +7,7 @@ import { TransactionItem } from '@/components/transactions/TransactionItem';
 import { useAccounts, useTransactions, useCategories, useBudgets, useStockHoldings, useTotalNetWorth } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { formatCurrency } from '@/utils/analytics';
-import { calculateBudgetStatuses, getDailyAllowance } from '@/utils/budget';
+import { calculateBudgetStatuses, getDailyAllowance, isLivingExpense } from '@/utils/budget';
 import { calculatePortfolioSummary } from '@/utils/stockCalculations';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import {
@@ -18,9 +18,9 @@ import {
   Plus,
   Target,
   ChevronRight,
-  WalletCards
+  WalletCards,
+  Building2
 } from 'lucide-react';
-import * as Icons from 'lucide-react';
 import { getSafeIcon } from '@/utils/iconHelper';
 
 export const Dashboard: React.FC = () => {
@@ -35,12 +35,13 @@ export const Dashboard: React.FC = () => {
   const { holdings } = useStockHoldings();
   const { totalNetWorth, cashTotal, stockTotalTWD } = useTotalNetWorth();
 
-  // 本月收支計算
+  // 本月生活收支計算 (自動排除投資股票交易)
+  const categoryMap = React.useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const monthIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
   const monthExpense = transactions
-    .filter((t) => t.type === 'expense')
+    .filter((t) => isLivingExpense(t, categoryMap))
     .reduce((sum, t) => sum + t.amount, 0);
   const monthBalance = monthIncome - monthExpense;
 
@@ -59,7 +60,6 @@ export const Dashboard: React.FC = () => {
   // 最近 5 筆交易
   const recentTransactions = transactions.slice(0, 5);
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
   const accountMap = new Map(accounts.map((a) => [a.id, a]));
 
   return (
@@ -231,7 +231,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="grid-3">
           {accounts.map((acc) => {
-            const IconComponent = getSafeIcon(acc.icon, Icons.Building2);
+            const IconComponent = getSafeIcon(acc.icon, Building2);
             let displayLabel = '';
             let displayAmount = formatCurrency(acc.balance);
             let amountColor = acc.balance < 0 ? 'var(--expense)' : 'var(--text-primary)';

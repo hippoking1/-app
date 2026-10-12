@@ -8,6 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "tsc -b",
     "preview": "vite preview",
+    "test": "vitest run",
+    "deploy:rules": "firebase deploy --only firestore:rules",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "cap:sync": "npm run build && npx cap sync android",
@@ -15,8 +17,10 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
+    "@capacitor/haptics": "^8.0.2",
     "date-fns": "^4.1.0",
     "firebase": "^11.3.0",
     "lucide-react": "^0.475.0",
@@ -25,6 +29,7 @@
     "react-router-dom": "^7.1.5",
     "recharts": "^2.15.1",
     "uuid": "^11.1.0",
+    "vaul": "^1.1.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {
@@ -36,6 +41,7 @@
     "gh-pages": "^6.3.0",
     "typescript": "~5.7.3",
     "vite": "^6.1.0",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^5.0.3"
   }
 }

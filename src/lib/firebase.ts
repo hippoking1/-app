@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import {
+  initializeFirestore,
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from 'firebase/firestore';
 
 // 從環境變數讀取 Firebase 配置
 const firebaseConfig = {
@@ -18,7 +23,19 @@ export const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfi
 // 匯出 Auth 與 Firestore 實例
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-export const db = getFirestore(app);
+
+// 初始化 Firestore 並開啟離線與多分頁 IndexedDB 持久化快取
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch {
+  firestoreInstance = getFirestore(app);
+}
+export const db = firestoreInstance;
 
 // 判斷是否為預設/Demo 模式
 export const isFirebaseConfigured = Boolean(

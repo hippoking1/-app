@@ -27,7 +27,9 @@ export interface Account {
   type: AccountType;
   icon: string;
   color: string;
-  balance: number;
+  balance: number; // 傳統儲存餘額 (相容過渡)
+  openingBalance?: number; // 初始基準餘額 (供衍生餘額計算架構使用)
+  trackBalance?: boolean; // 是否追蹤帳戶餘額 (若為 false 則為純額度模式)
   creditLimit?: number; // 信用卡總信用額度 (NT$)
   billingCycleDay?: number; // 信用卡帳單結帳日 (每月 1 ~ 31 號)
   usedAmountThisMonth?: number; // 現金錢包本月已用額度 (每月 1 號重新計算)
@@ -121,6 +123,8 @@ export interface Transaction {
   aiGenerated?: string; // AI 產生的原始提示詞
   installment?: InstallmentInfo; // 信用卡分期資訊
   subscription?: SubscriptionInfo; // 信用卡訂閱付款資訊
+  source?: 'manual' | 'ai' | 'stock' | 'subscription' | 'installment'; // 交易來源
+  excludeFromBudget?: boolean; // 是否排除於生活預算計算
   createdAt: string;
   updatedAt: string;
 }

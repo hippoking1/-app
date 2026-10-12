@@ -23,6 +23,9 @@ function doGet(e) {
           engine: 'Yahoo Finance v8 + Gemini 3.7 Flash',
           timestamp: new Date().toISOString()
         });
+
+      case 'getTWStockAll':
+        return typeof handleGetTWStockAll === 'function' ? handleGetTWStockAll() : jsonResponse({ error: 'getTWStockAll 未實作' }, 404);
         
       default:
         return jsonResponse({ error: '無效的 GET 動作: ' + action }, 400);
@@ -80,10 +83,14 @@ function doPost(e) {
  */
 function jsonResponse(data, statusCode) {
   statusCode = statusCode || 200;
+  const isOk = statusCode >= 200 && statusCode < 300;
+  const errorMsg = isOk ? undefined : (data && data.error ? data.error : (typeof data === 'string' ? data : '未知錯誤'));
+
   const output = JSON.stringify({
-    success: statusCode >= 200 && statusCode < 300,
+    success: isOk,
     statusCode: statusCode,
-    data: data
+    data: isOk ? data : null,
+    error: errorMsg
   });
   
   return ContentService.createTextOutput(output)

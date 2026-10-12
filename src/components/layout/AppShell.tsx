@@ -6,13 +6,16 @@ import { ToastContainer } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
 import { TransactionForm } from '@/components/transactions/TransactionForm';
 import { useAppStore } from '@/stores/appStore';
-import { useBudgets, useTransactions, useCategories, useSubscriptionAutoProcessor } from '@/hooks/useFirestore';
+import { useBudgets, useTransactions, useCategories, useSubscriptionAutoProcessor, useGlobalDataSync } from '@/hooks/useFirestore';
 import { calculateBudgetStatuses } from '@/utils/budget';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 
 export const AppShell: React.FC = () => {
   const { user, isLoadingAuth, isTransactionModalOpen, setTransactionModalOpen, currentMonth } =
     useAppStore();
+
+  // 全域資料即時監聽同步 (統一 1 組 onSnapshot)
+  useGlobalDataSync();
 
   // 背景自動排程：檢查並執行到期的信用卡定期訂閱扣款
   useSubscriptionAutoProcessor();

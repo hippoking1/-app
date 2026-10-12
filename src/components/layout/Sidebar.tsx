@@ -154,7 +154,7 @@ export const Sidebar: React.FC = () => {
                   textDecoration: 'none',
                   fontSize: '14px',
                   fontWeight: isActive ? 700 : 500,
-                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                  color: isActive ? 'var(--primary)' : 'var(--text-secondary)',
                   backgroundColor: isActive ? 'var(--primary-glow)' : 'transparent',
                   border: isActive ? '1px solid var(--border-focus)' : '1px solid transparent',
                   transition: 'all 0.15s',
