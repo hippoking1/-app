@@ -123,13 +123,16 @@ jobs:
 
       - name: Create or Update Latest GitHub Release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v1.1.0-latest
+          tag_name: v1.1.1-latest
           name: 智慧記帳 最新電腦版 (.exe) & 手機版 (.apk) 安裝包
+          make_latest: true
           body: |
-            ### 🚀 智慧記帳 獨立安裝檔下載
+            ### 🚀 智慧記帳 獨立安裝檔下載 (v1.1.1)
             - 💻 **Windows 電腦安裝版**：下載 `SmartExpenseTracker-Windows-Setup.exe`（或免安裝版 `SmartExpenseTracker-Windows-Portable.exe`）
-            - 📱 **Android 手機安裝版**：下載 `SmartExpenseTracker-Android.apk`
+            - 📱 **Android 手機安裝版**：下載 `SmartExpenseTracker-Android.apk`（支援 App 內建 Google 安全登入彈窗，不跳出外部瀏覽器）
             - ✨ **單一視窗鎖定 & 啟動自動更新**：開啟 App 時自動偵測並同步最新線上版本，重複點擊圖示自動喚醒既有視窗，絕不重複開啟多分頁。
           prerelease: false
           files: |

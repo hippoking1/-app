@@ -1,6 +1,7 @@
 {
   "appId": "com.smartexpense.app",
   "productName": "智慧記帳",
+  "publish": null,
   "directories": {
     "output": "release"
   },

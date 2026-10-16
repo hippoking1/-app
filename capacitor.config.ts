@@ -7,7 +7,15 @@ const config: CapacitorConfig = {
   server: {
     url: 'https://hippoking1.github.io/-app/',
     cleartext: true,
-    androidScheme: 'https'
+    androidScheme: 'https',
+    allowNavigation: [
+      'hippoking1.github.io',
+      '*.firebaseapp.com',
+      '*.google.com',
+      'accounts.google.com',
+      '*.googleapis.com',
+      '*.gstatic.com'
+    ]
   }
 };
 

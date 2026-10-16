@@ -33,6 +33,12 @@ if (!gotSingleInstanceLock) {
   });
 }
 
+function getCleanChromeUserAgent(defaultUa) {
+  return defaultUa
+    .replace(/\s*Electron\/[^\s]+/gi, '')
+    .replace(/\s*smart-expense-tracker\/[^\s]+/gi, '');
+}
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -51,15 +57,22 @@ function createMainWindow() {
     }
   });
 
+  // 移除 Electron 預設 User-Agent 標記，確保 Google OAuth 驗證順暢通過
+  const cleanUa = getCleanChromeUserAgent(mainWindow.webContents.getUserAgent());
+  mainWindow.webContents.setUserAgent(cleanUa);
+
   // 移除頂部傳統選單列，提供純粹原生獨立 App 體驗
   mainWindow.setMenuBarVisibility(false);
 
-  // 處理彈出視窗：允許 Firebase Google OAuth 驗證視窗，其餘外部下載連結交由系統開啟
+  // 處理彈出視窗：允許 Firebase Google OAuth 驗證視窗 (含 about:blank 初始視窗)，其餘外部下載連結交由系統開啟
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     const isAuthPopup =
+      !url ||
+      url === 'about:blank' ||
       url.includes('accounts.google.com') ||
       url.includes('firebaseapp.com') ||
-      url.includes('googleapis.com');
+      url.includes('googleapis.com') ||
+      url.includes('google.com/o/oauth2');
 
     if (isAuthPopup) {
       return {
@@ -67,9 +80,15 @@ function createMainWindow() {
         overrideBrowserWindowOptions: {
           width: 520,
           height: 680,
+          title: 'Google 帳號安全登入',
+          backgroundColor: '#0b0f19',
           autoHideMenuBar: true,
           parent: mainWindow,
-          modal: false
+          modal: false,
+          webPreferences: {
+            contextIsolation: true,
+            nodeIntegration: false
+          }
         }
       };
     }
@@ -80,9 +99,22 @@ function createMainWindow() {
     return { action: 'deny' };
   });
 
+  // 當 OAuth 子視窗建立時，套用標準 Chrome User-Agent 並在關閉時通知主視窗解除 loading
+  mainWindow.webContents.on('did-create-window', (childWindow) => {
+    childWindow.setMenuBarVisibility(false);
+    childWindow.webContents.setUserAgent(cleanUa);
+    childWindow.on('closed', () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents
+          .executeJavaScript("window.dispatchEvent(new CustomEvent('oauth-popup-closed'));")
+          .catch(() => {});
+      }
+    });
+  });
+
   // 若遠端因離線無法連線，自動切換至封裝於安裝檔內的本地離線包 (dist/index.html)
   let fellBackToLocal = false;
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, validatedURL, isMainFrame) => {
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, _errorDescription, _validatedURL, isMainFrame) => {
     if (isMainFrame && !fellBackToLocal && errorCode !== -3) {
       fellBackToLocal = true;
       const localIndex = path.join(__dirname, '../dist/index.html');
