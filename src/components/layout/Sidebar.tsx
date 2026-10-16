@@ -20,6 +20,7 @@ import { useAppStore } from '@/stores/appStore';
 import { useTotalNetWorth } from '@/hooks/useFirestore';
 import { formatCurrency } from '@/utils/analytics';
 import { logout } from '@/services/auth';
+import { CURRENT_VERSION } from '@/hooks/useVersionUpdater';
 
 export const Sidebar: React.FC = () => {
   const {
@@ -88,9 +89,23 @@ export const Sidebar: React.FC = () => {
               >
                 <Sparkles size={18} />
               </div>
-              <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.5px' }}>
-                智慧記帳
-              </span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <span style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.5px' }}>
+                  智慧記帳
+                </span>
+                <span
+                  className="font-mono"
+                  style={{
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    padding: '1px 5px',
+                    borderRadius: '4px'
+                  }}
+                >
+                  v{CURRENT_VERSION}
+                </span>
+              </div>
             </div>
           )}
           <button

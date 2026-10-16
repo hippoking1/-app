@@ -31,11 +31,11 @@
 - **交易快速編輯**：明細列表點擊即可直接修改金額、收支分類、帳戶與備忘，修改即時連動全域資產計算。
 - **刪除防呆與一鍵復原**：刪除紀錄後自動彈出 Toast 提供 5 秒「復原」按鈕，防止誤觸丟失資料。
 
-### 5. 📱 極致行動端體驗與原生手感 (Capacitor & PWA)
-- **FAB 多功能記帳按鈕**：底部中央按鈕點擊觸發輕微震動並彈出快速記帳；**長按（500ms）** 發出中度震動並直通 Gemini AI 語音/自然語言記帳。
-- **觸覺震動反饋 (Haptics)**：記帳儲存成功、點擊操作時觸發原生震動反饋，大幅增進操作實體回饋感。
-- **Android 實體返回鍵智能攔截**：開啟 Modal / 表單時按實體返回鍵自動平滑關閉，無彈窗時正常返回上一頁或最小化 App。
-- **PWA 高解析安裝支援**：內建完整 192x192、512x512 及 Apple Touch Icon，隨時加入手機桌面免裝檔運行。
+### 5. 💻📱 電腦與手機雙平台獨立安裝 & 啟動自動更新 (Electron / Capacitor / PWA)
+- **雙平台實體安裝檔支援**：支援打包為 Windows 電腦版安裝檔 (`.exe`) 與 Android 手機版安裝檔 (`.apk`)，並內建一鍵獨立視窗安裝。
+- **單一視窗鎖定（杜絕開啟多個瀏覽器分頁）**：整合 OS 級 `requestSingleInstanceLock`、Android `singleTask`、PWA `launch_handler: focus-existing` 與 `BroadcastChannel` 單一執行個體守衛，重複點擊捷徑永遠直接聚焦既有視窗。
+- **開啟 App 自動偵測並無感更新**：啟動或切回前景時自動比對遠端 `version.json` 與 Service Worker，閒置時自動套用最新版重載，記帳輸入中則彈出不打斷輸入的懸浮更新通知。
+- **FAB 多功能記帳按鈕 & 觸覺震動反饋 (Haptics)**：底部中央按鈕短按快速記帳、長按（500ms）直通 Gemini AI 語音/自然語言記帳；搭配 Android 實體返回鍵智能攔截。
 
 ### 6. 📊 視覺化預算與財務報表
 - **各類支出趨勢折線圖**：專注支出流向分析，以各消費類別（餐飲、交通、娛樂等）繪製獨立趨勢折線，深度洞察每類花費長週期變化。
@@ -59,14 +59,15 @@
 | **前端核心** | React 19、TypeScript、Vite 6、HashRouter、React.lazy |
 | **狀態與快取** | Zustand 5、Single DataStore、IndexedDB (Firestore Cache) |
 | **樣式架構** | CSS Modules、Glassmorphism 深色/淺色主題、語意 Tokens |
-| **原生體驗** | Capacitor 8 (@capacitor/app, @capacitor/haptics)、PWA |
+| **跨平台封裝** | Electron (Windows `.exe`)、Capacitor 8 (Android `.apk`)、PWA (`launch_handler`) |
+| **版本熱更新** | 自動 `version.json` 建置插件、智慧無感自動更新引擎 (`useVersionUpdater`) |
 | **單元測試** | Vitest（餘額運算、信用卡週期、生活支出過濾測試） |
 | **圖表與視覺** | Recharts、Lucide React (Curated Tree-shaking) |
 | **後端代理** | Google Apps Script (GAS) Web App + Firebase Auth ID Token |
 | **AI 模型** | Google Gemini 3.7 Flash API |
 | **金融報價** | Yahoo Finance v8 API + 全球即時 Search API |
 | **資料庫 & 認證**| Firebase Authentication + Cloud Firestore |
-| **部署發布** | GitHub Pages、Firebase CLI、Vite PWA (Workbox) |
+| **部署發布** | GitHub Pages、GitHub Actions (自動發布 `.exe` & `.apk`)、Firebase CLI |
 
 ---
 
@@ -191,34 +192,51 @@
 
 ---
 
-## 📱 Android 手機安裝指南
+## 💻 電腦版 (.exe) & 📱 手機版 (.apk) 獨立安裝指南（免開瀏覽器分頁 & 自動更新）
 
-本專案提供兩種在 Android 手機上使用的方式：
+本專案全面支援**單一視窗執行個體鎖定（Single Instance Lock）**與**開啟時智慧無感自動更新（Auto Version Updater）**，徹底解決傳統網頁模式容易重複開啟多個瀏覽器分頁的問題：
 
-### 方案 A：【最推薦】免安裝檔，透過 Chrome 秒速安裝為原生 App (PWA)
-1. 用手機上的 **Chrome 瀏覽器** 開啟已部署的網址：`https://<username>.github.io/<repo>/`
-2. 點擊瀏覽器右上角 **「三個點（選單）」** ➔ 選擇 **「安裝應用程式」** 或 **「新增至主螢幕」**。
-3. 手機桌面即會生成一個獨立的「智慧記帳」App 圖示，具備**全螢幕運行、無網址列、快取離線開啟及自動同步最新版**的極佳體驗！
+### 1. 💻 Windows 電腦版安裝（兩種方式）
+
+#### 方法 A：下載實體 Windows 安裝檔 (`.exe`)
+1. 前往專案的 **GitHub Releases**（或直接在 App 內的 **「系統設定」 ➔ 「下載電腦版安裝檔 (.exe)」**）：
+   - 安裝版：`SmartExpenseTracker-Windows-Setup.exe`（自動建立桌面與開始選單捷徑）
+   - 免安裝版：`SmartExpenseTracker-Windows-Portable.exe`（單檔直接執行）
+2. 具備 **OS 級單一執行個體鎖定 (`requestSingleInstanceLock`)**：重複雙擊桌面捷徑時，系統會直接喚醒並聚焦已開啟的主視窗，**絕不會開啟第二個視窗或瀏覽器分頁**。
+3. 本機自行打包 `.exe` 指令：
+   ```bash
+   npm install --save-dev electron electron-builder --legacy-peer-deps
+   npm run build:win
+   ```
+   編譯完成後即可於 `release/` 資料夾取得 `.exe` 安裝包。
+
+#### 方法 B：透過 Chrome / Edge 一鍵安裝為獨立桌面 App (PWA)
+1. 開啟系統後，進入 **「系統設定」** 點擊 **「⚡ 一鍵直接安裝為獨立視窗 App」**（或點擊網址列右側的「安裝圖示」）。
+2. 已配置 **`launch_handler: { client_mode: ['focus-existing', 'auto'] }`** 與 **`BroadcastChannel` 單一實例守衛**：點擊桌面捷徑永遠聚焦既有視窗，若誤開新分頁也會自動攔截保護。
 
 ---
 
-### 方案 B：打包為實體 APK 安裝檔 (`.apk`)
+### 2. 📱 Android 手機安裝（兩種方式）
 
-專案已原生整合 **Capacitor 8** 與 **GitHub Actions 自動編譯工作流**：
-
-#### 方法 1：由 GitHub Actions 免費自動下載 APK (免裝環境)
-1. 將程式碼 Push 至 GitHub 後，點擊 GitHub 專案上方的 **「Actions」** 頁籤。
-2. 點選 **「Build Android APK」** 執行紀錄。
-3. 在最下方的 **Artifacts (產物)** 區塊即可直接下載 **`SmartExpenseTracker-Debug-APK.zip`**，解壓縮後將 `app-debug.apk` 傳至手機即可安裝！
-
-#### 方法 2：本機使用 Android Studio 建置
-1. 確保電腦已安裝 [Android Studio](https://developer.android.com/studio)。
-2. 在專案根目錄執行同步並開啟 Android 專案：
+#### 方法 A：下載實體 Android 安裝檔 (`.apk`)
+1. 將程式碼 Push 至 GitHub 後，GitHub Actions (`build-apk.yml`) 會自動編譯並發布至 **GitHub Releases**，可直接於 **「系統設定」 ➔ 「下載手機版安裝檔 (.apk)」** 下載 `SmartExpenseTracker-Android.apk`。
+2. 已配置 `android:launchMode="singleTask"` 與啟動快取自動刷新，確保手機永遠單一實例運行且每次開啟自動同步最新線上版本。
+3. 本機使用 Android Studio 建置：
    ```bash
    npm run cap:sync
    npm run cap:open
    ```
-3. 在 Android Studio 中點擊上方選單 **Build ➔ Build Bundle(s) / APK(s) ➔ Build APK(s)**，即可在 `android/app/build/outputs/apk/debug/` 取得 `.apk` 檔案。
+
+#### 方法 B：透過手機 Chrome 秒速安裝至主畫面 (PWA)
+1. 用手機 Chrome 開啟網址，於 **「系統設定」** 點擊 **「⚡ 一鍵直接安裝為獨立視窗 App」** 或由瀏覽器選單點選「安裝應用程式」。
+
+---
+
+### 3. 🔄 開啟 App 自動偵測最新版本與智慧更新機制
+- **編譯期自動生成 `version.json`**：每次執行 `npm run build` 時，Vite 插件會自動產生帶精確時間戳與版本號的 `dist/version.json`。
+- **啟動與切回前景即時偵測**：開啟 App 或由背景切回前景時，系統會以 `no-store` 穿透快取比對遠端 `version.json` 及 Service Worker：
+  - **剛開啟 App 瞬間（尚未輸入資料）**：若偵測到新版本，自動清理舊快取並無縫重載為最新版本。
+  - **記帳輸入操作中**：絕不強制打斷輸入，改於頂部彈出「✨ 發現新版本」通知橫幅，供使用者一鍵更新。
 
 ---
 
@@ -234,21 +252,23 @@
 ## 📁 專案目錄結構
 
 ```text
+├── android/                  # Capacitor Android 原生專案 (.apk 封裝與單一實例設定)
+├── electron/                 # Electron Windows 桌面應用主程序與 Preload (單一視窗鎖定與快取清理)
 ├── gas/
 │   └── Code.gs               # GAS 一體化後端 (Gemini 3.7 Flash + Yahoo Finance 引擎)
-├── public/                   # PWA Manifest、App Icons 等靜態資源
+├── public/                   # PWA Manifest (launch_handler 單一視窗)、App Icons 等靜態資源
 ├── src/
 │   ├── components/
 │   │   ├── accounts/         # 帳戶與信用卡管理元件
 │   │   ├── ai/               # AI 記帳解析卡片
 │   │   ├── analytics/        # 各類支出趨勢圖表與篩選元件
 │   │   ├── budget/           # 預算卡片與設定表單
-│   │   ├── common/           # 全域 ErrorBoundary 等通用防護元件
+│   │   ├── common/           # AppRuntimeGuard (自動更新與防多分頁)、ErrorBoundary 等防護元件
 │   │   ├── layout/           # 側邊欄、頂部列、底部導航與 AppShell
 │   │   ├── stocks/           # 股票持倉卡、Yahoo 搜尋彈窗與建倉表單
 │   │   ├── transactions/     # 記帳清單、分類選擇器、快速表單與編輯 Modal
 │   │   └── ui/               # 按鈕、卡片、彈窗、輸入框、Toast (支援 Undo) 等
-│   ├── hooks/                # Firestore 監聽與股票查詢 Custom Hooks
+│   ├── hooks/                # Firestore 監聽、版本自動更新 (useVersionUpdater)、單一視窗守衛與安裝 Hooks
 │   ├── lib/                  # Firebase SDK 初始化與持久離線快取配置
 │   ├── pages/                # 儀表板、明細、帳戶、預算、股票、AI、設定等頁面
 │   ├── services/             # Auth、Firestore、GAS 呼叫模組與種子資料
@@ -256,12 +276,13 @@
 │   ├── types/                # TypeScript 財務與股票型別定義
 │   └── utils/                # 餘額即時引擎 (balances)、財務計算、防禦性工具
 ├── tests/                    # Vitest 單元測試 (餘額演算、信用卡週期沖銷)
+├── electron-builder.json     # Windows 電腦版 (.exe) 安裝包與免安裝版編譯設定
 ├── .firebaserc               # Firebase 專案綁定配置
 ├── firebase.json             # Firebase Firestore 規則與配置
 ├── firestore.rules           # Cloud Firestore 安全存取規則
 ├── .env.example              # 環境變數範本
 ├── package.json              # 專案相依套件與指令設定
-└── vite.config.ts            # Vite 與 PWA 配置
+└── vite.config.ts            # Vite、version.json 自動生成插件與 PWA 配置
 ```
 
 ---

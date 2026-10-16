@@ -1,7 +1,9 @@
 {
   "name": "smart-expense-tracker",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "description": "智慧記帳 - AI & 投資理財助手 (支援 Windows .exe / Android .apk / PWA 單一視窗與自動版本更新)",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +14,8 @@
     "deploy:rules": "firebase deploy --only firestore:rules",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
+    "electron:start": "npx electron .",
+    "build:win": "npm run build && npx --yes electron-builder --win --config electron-builder.json",
     "cap:sync": "npm run build && npx cap sync android",
     "cap:open": "npx cap open android"
   },

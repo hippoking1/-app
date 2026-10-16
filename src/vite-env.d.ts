@@ -14,3 +14,21 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare const __APP_VERSION__: string;
+declare const __APP_BUILD_ID__: string;
+declare const __APP_BUILD_TIME__: string;
+
+interface ElectronAPI {
+  isElectron: boolean;
+  platform: string;
+  getAppVersion: () => Promise<string>;
+  reloadAndClearCache: () => Promise<void>;
+  focusMainWindow: () => Promise<void>;
+  openExternalUrl: (url: string) => Promise<void>;
+}
+
+interface Window {
+  electronAPI?: ElectronAPI;
+}
+

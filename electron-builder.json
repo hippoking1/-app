@@ -1,0 +1,38 @@
+{
+  "appId": "com.smartexpense.app",
+  "productName": "智慧記帳",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "public/pwa-512x512.png",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "icon": "public/pwa-512x512.png",
+    "artifactName": "SmartExpenseTracker-Windows-${target}.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "智慧記帳",
+    "artifactName": "SmartExpenseTracker-Windows-Setup.${ext}"
+  },
+  "portable": {
+    "artifactName": "SmartExpenseTracker-Windows-Portable.${ext}"
+  }
+}

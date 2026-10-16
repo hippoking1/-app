@@ -5,6 +5,7 @@ import { PageSkeleton } from '@/components/common/PageSkeleton';
 import { useAppStore } from '@/stores/appStore';
 import { subscribeAuthState } from '@/services/auth';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { AppRuntimeGuard } from '@/components/common/AppRuntimeGuard';
 
 const Login = React.lazy(() => import('@/pages/Login').then((m) => ({ default: m.Login })));
 const Dashboard = React.lazy(() => import('@/pages/Dashboard').then((m) => ({ default: m.Dashboard })));
@@ -31,6 +32,7 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
+      <AppRuntimeGuard />
       <HashRouter>
         <React.Suspense fallback={<PageSkeleton />}>
           <Routes>

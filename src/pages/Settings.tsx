@@ -6,6 +6,8 @@ import { upgradeAnonymousWithGoogle, logout } from '@/services/auth';
 import { useAccounts, useTransactions, useCategories, useBudgets, useStockHoldings } from '@/hooks/useFirestore';
 import { isFirebaseConfigured } from '@/lib/firebase';
 import { runSystemDiagnostics, DiagnosticResult, GAS_URL } from '@/services/gas';
+import { useAppInstall } from '@/hooks/useAppInstall';
+import { useVersionUpdater } from '@/hooks/useVersionUpdater';
 import {
   User,
   ShieldCheck,
@@ -17,10 +19,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Activity,
-  Loader2,
   TrendingUp,
   Cpu,
-  Server
+  Server,
+  MonitorSmartphone,
+  RefreshCw,
+  Laptop,
+  Smartphone
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
@@ -31,9 +36,55 @@ export const Settings: React.FC = () => {
   const { budgets } = useBudgets();
   const { holdings } = useStockHoldings();
 
+  const {
+    runtimeMode,
+    isStandaloneApp,
+    canPromptInstall,
+    promptInstall,
+    windowsExeUrl,
+    androidApkUrl
+  } = useAppInstall();
+
+  const {
+    currentVersion,
+    currentBuildId,
+    latestVersion,
+    hasUpdate,
+    isChecking,
+    isUpdating,
+    lastCheckedAt,
+    triggerManualCheck,
+    applyUpdate
+  } = useVersionUpdater();
+
   const [upgrading, setUpgrading] = useState(false);
   const [diagnosing, setDiagnosing] = useState(false);
   const [diagResult, setDiagResult] = useState<DiagnosticResult | null>(null);
+
+  // 一鍵安裝獨立視窗 App
+  const handleInstallApp = async () => {
+    const installed = await promptInstall();
+    if (installed) {
+      addToast({ type: 'success', message: '🎉 已成功安裝獨立應用程式！之後可由桌面圖示直接開啟' });
+    }
+  };
+
+  // 手動檢查版本更新
+  const handleCheckUpdate = async () => {
+    const found = await triggerManualCheck();
+    if (found) {
+      addToast({ type: 'info', message: `發現新版本 v${latestVersion || currentVersion}，正在準備更新！` });
+    } else {
+      addToast({ type: 'success', message: `目前已是最新版本 (v${currentVersion})！` });
+    }
+  };
+
+  const runtimeLabelMap = {
+    electron: '💻 Windows 電腦獨立安裝版 (.exe 單一視窗鎖定)',
+    capacitor: '📱 Android 手機原生安裝版 (.apk 單一視窗鎖定)',
+    'pwa-standalone': '✨ 獨立應用程式視窗模式 (單一視窗防多分頁)',
+    browser: '🌐 瀏覽器分頁模式（建議安裝獨立 App 免開瀏覽器分頁）'
+  };
 
   // 訪客帳號綁定 Google
   const handleUpgradeAccount = async () => {
@@ -52,7 +103,7 @@ export const Settings: React.FC = () => {
   // 匯出 JSON 備份檔
   const handleExportData = () => {
     const backupData = {
-      version: '1.0',
+      version: currentVersion,
       exportedAt: new Date().toISOString(),
       user: { uid: user?.uid, email: user?.email },
       accounts,
@@ -97,9 +148,133 @@ export const Settings: React.FC = () => {
           系統與偏好設定
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          帳戶管理、外觀主題切換、資料備份與 GAS & Gemini 後端連線診斷
+          電腦/手機獨立安裝包、自動版本更新、帳戶管理與 GAS & Gemini 後端連線診斷
         </p>
       </div>
+
+      {/* 0. 電腦與手機獨立安裝檔 & 版本自動更新中心 */}
+      <Card
+        glass
+        padding="lg"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px',
+          border: '1px solid var(--border-focus)'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MonitorSmartphone size={18} color="var(--primary)" /> 獨立應用程式安裝 & 自動版本更新
+            </h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              免開瀏覽器分頁、強制單一視窗運行，並於每次啟動時自動偵測且同步最新版本
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {hasUpdate ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={applyUpdate}
+                loading={isUpdating}
+                icon={<Sparkles size={15} />}
+              >
+                立即更新至 v{latestVersion}
+              </Button>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleCheckUpdate}
+                loading={isChecking}
+                icon={<RefreshCw size={15} />}
+              >
+                檢查版本更新
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* 當前版本與執行模式資訊 */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '10px',
+            backgroundColor: 'var(--bg-tertiary)',
+            padding: '12px 14px',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '12px'
+          }}
+        >
+          <div>
+            <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>目前版本 / 建置編號</div>
+            <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>v{currentVersion}</span>
+              <code className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                ({currentBuildId})
+              </code>
+              {!hasUpdate && (
+                <span style={{ color: 'var(--income)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                  <CheckCircle2 size={13} /> 最新版
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>目前運行模式</div>
+            <div style={{ fontWeight: 700, color: isStandaloneApp ? 'var(--income)' : 'var(--warning)' }}>
+              {runtimeLabelMap[runtimeMode]}
+            </div>
+          </div>
+        </div>
+
+        {/* 安裝檔下載與一鍵桌面安裝區 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+          {canPromptInstall && (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleInstallApp}
+              icon={<MonitorSmartphone size={16} />}
+            >
+              ⚡ 一鍵直接安裝為獨立視窗 App
+            </Button>
+          )}
+
+          <a
+            href={windowsExeUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <Button variant="secondary" size="sm" icon={<Laptop size={16} />}>
+              下載電腦版安裝檔 (.exe)
+            </Button>
+          </a>
+
+          <a
+            href={androidApkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none' }}
+          >
+            <Button variant="secondary" size="sm" icon={<Smartphone size={16} />}>
+              下載手機版安裝檔 (.apk)
+            </Button>
+          </a>
+
+          {lastCheckedAt && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+              上次檢查：{new Date(lastCheckedAt).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+      </Card>
 
       {/* 1. 帳戶管理區塊 */}
       <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

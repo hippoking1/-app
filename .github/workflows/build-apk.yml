@@ -1,12 +1,16 @@
-name: Build Android APK
+name: Build Android APK & Windows EXE
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
+    name: Build Android APK (.apk)
     runs-on: ubuntu-latest
 
     steps:
@@ -49,6 +53,7 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk ../SmartExpenseTracker-Android.apk
         env:
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
           ANDROID_HOME: /usr/local/lib/android/sdk
@@ -56,5 +61,78 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SmartExpenseTracker-Debug-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: SmartExpenseTracker-Android-APK
+          path: SmartExpenseTracker-Android.apk
+
+  build-windows:
+    name: Build Windows Desktop Installer (.exe)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Node Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install Electron & Builder
+        run: npm install --save-dev electron electron-builder --legacy-peer-deps
+
+      - name: Build Web App & Package Windows EXE
+        run: npm run build:win
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY || 'AIzaSyA-70qMS8vOsMS2xISx8v2AjVX_p0N5yq4' }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN || 'smart-expense-1da98.firebaseapp.com' }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID || 'smart-expense-1da98' }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET || 'smart-expense-1da98.firebasestorage.app' }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID || '917511144153' }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID || '1:917511144153:web:e611ba3b1e53ba78fa34c8' }}
+          VITE_GAS_DEPLOYMENT_URL: ${{ secrets.VITE_GAS_DEPLOYMENT_URL || 'https://script.google.com/macros/s/AKfycbyLbN1FU2WqWIhkvk54HJVWNzyB4yknUrH8l85uIk_i8qK_T4jIKlrrN48bRdTEbAKA/exec' }}
+
+      - name: Upload Windows EXE Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmartExpenseTracker-Windows-EXE
+          path: |
+            release/SmartExpenseTracker-Windows-Setup.exe
+            release/SmartExpenseTracker-Windows-Portable.exe
+
+  publish-release:
+    name: Publish Latest Installers (.exe & .apk)
+    needs: [build-apk, build-windows]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download APK Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SmartExpenseTracker-Android-APK
+          path: release-assets
+
+      - name: Download Windows EXE Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: SmartExpenseTracker-Windows-EXE
+          path: release-assets
+
+      - name: Create or Update Latest GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.1.0-latest
+          name: 智慧記帳 最新電腦版 (.exe) & 手機版 (.apk) 安裝包
+          body: |
+            ### 🚀 智慧記帳 獨立安裝檔下載
+            - 💻 **Windows 電腦安裝版**：下載 `SmartExpenseTracker-Windows-Setup.exe`（或免安裝版 `SmartExpenseTracker-Windows-Portable.exe`）
+            - 📱 **Android 手機安裝版**：下載 `SmartExpenseTracker-Android.apk`
+            - ✨ **單一視窗鎖定 & 啟動自動更新**：開啟 App 時自動偵測並同步最新線上版本，重複點擊圖示自動喚醒既有視窗，絕不重複開啟多分頁。
+          prerelease: false
+          files: |
+            release-assets/SmartExpenseTracker-Android.apk
+            release-assets/SmartExpenseTracker-Windows-Setup.exe
+            release-assets/SmartExpenseTracker-Windows-Portable.exe
