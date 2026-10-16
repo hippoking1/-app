@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate, useLocation } from 'react-router-dom';
-import { Sidebar } from './Sidebar';
+import { Outlet, Navigate, useLocation, NavLink } from 'react-router-dom';
+import { Sidebar, NAV_ITEMS } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
@@ -11,24 +11,40 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { calculateBudgetStatuses } from '@/utils/budget';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { App as CapApp } from '@capacitor/app';
+import { CURRENT_VERSION, checkRemoteVersion, useVersionStore, applyAppUpdate } from '@/hooks/useVersionUpdater';
+import { Menu, Sparkles, RefreshCw, Sun, Moon } from 'lucide-react';
+import { hapticLight } from '@/utils/haptics';
 
 export const AppShell: React.FC = () => {
   const user = useAppStore((s) => s.user);
   const isLoadingAuth = useAppStore((s) => s.isLoadingAuth);
   const isTransactionModalOpen = useAppStore((s) => s.isTransactionModalOpen);
   const setTransactionModalOpen = useAppStore((s) => s.setTransactionModalOpen);
+  const isMobileMenuOpen = useAppStore((s) => s.isMobileMenuOpen);
+  const setMobileMenuOpen = useAppStore((s) => s.setMobileMenuOpen);
   const currentMonth = useAppStore((s) => s.currentMonth);
+  const theme = useAppStore((s) => s.theme);
+  const toggleTheme = useAppStore((s) => s.toggleTheme);
+  const addToast = useAppStore((s) => s.addToast);
+
+  const isCheckingVersion = useVersionStore((s) => s.isChecking);
+  const hasUpdate = useVersionStore((s) => s.hasUpdate);
+  const latestVersion = useVersionStore((s) => s.latestVersion);
 
   const location = useLocation();
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const [isAlertDismissed, setIsAlertDismissed] = useState(false);
 
-  // 原生 Android 實體返回鍵處理：Modal 開啟時先關閉 Modal，無 Modal 時依歷史上一頁或最小化
+  // 原生 Android 實體返回鍵處理：抽屜或 Modal 開啟時優先關閉，否則返回上一頁或最小化
   React.useEffect(() => {
     let removeHandler: (() => void) | undefined;
 
     CapApp.addListener('backButton', ({ canGoBack }) => {
       const state = useAppStore.getState();
+      if (state.isMobileMenuOpen) {
+        state.setMobileMenuOpen(false);
+        return;
+      }
       if (state.isTransactionModalOpen) {
         state.setTransactionModalOpen(false);
         return;
@@ -69,6 +85,24 @@ export const AppShell: React.FC = () => {
     : [];
   const overBudgetAlerts = budgetStatuses.filter((s) => s.isOverBudget);
 
+  // 行動端頂部一鍵檢查更新或套用更新
+  const handleQuickUpdateCheck = async () => {
+    hapticLight();
+    if (hasUpdate) {
+      await applyAppUpdate();
+      return;
+    }
+    const found = await checkRemoteVersion(true);
+    if (found) {
+      await applyAppUpdate();
+    } else {
+      addToast({
+        type: 'success',
+        message: `目前已是最新版本 (v${CURRENT_VERSION})！`
+      });
+    }
+  };
+
   if (isLoadingAuth) {
     return (
       <div
@@ -101,15 +135,209 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="app-container">
-      {/* 桌面端才 mount Sidebar，避免手機重複計算與 DOM 負擔 */}
+      {/* 桌面端固定顯示左側完整功能欄 Sidebar */}
       {isDesktop ? (
         <div className="sidebar-desktop-wrapper">
           <Sidebar />
         </div>
       ) : null}
 
+      {/* 行動端滑出式完整功能側邊欄抽屜 (Slide-over Full Sidebar Drawer) */}
+      {!isDesktop && isMobileMenuOpen ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex'
+          }}
+        >
+          {/* 半透明模糊背景遮罩 */}
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)'
+            }}
+          />
+          <Sidebar isMobileDrawer onCloseMobile={() => setMobileMenuOpen(false)} />
+        </div>
+      ) : null}
+
       {/* 主內容展示區域 */}
       <div className="main-content">
+        {/* 行動端專屬頂部導覽列 + 8 大完整功能橫向快捷列 */}
+        {!isDesktop ? (
+          <header
+            style={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 45,
+              backgroundColor: 'var(--bg-glass-heavy)',
+              backdropFilter: 'blur(18px)',
+              WebkitBackdropFilter: 'blur(18px)',
+              borderBottom: '1px solid var(--border)'
+            }}
+          >
+            {/* 第一列：選單按鈕、標題版本號、一鍵更新檢查、主題切換 */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 14px 8px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    hapticLight();
+                    setMobileMenuOpen(true);
+                  }}
+                  aria-label="開啟完整功能選單"
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-primary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '6px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 700
+                  }}
+                >
+                  <Menu size={17} color="var(--primary)" />
+                  <span>選單</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '7px',
+                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#ffffff'
+                    }}
+                  >
+                    <Sparkles size={14} />
+                  </div>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    智慧記帳
+                  </span>
+                  <span
+                    className="font-mono"
+                    style={{
+                      fontSize: '10px',
+                      color: 'var(--text-muted)',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      padding: '1px 5px',
+                      borderRadius: '4px'
+                    }}
+                  >
+                    v{CURRENT_VERSION}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={handleQuickUpdateCheck}
+                  title="檢查並同步最新版本"
+                  style={{
+                    background: hasUpdate ? 'var(--primary)' : 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    color: hasUpdate ? '#ffffff' : 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '5px 8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <RefreshCw size={13} className={isCheckingVersion ? 'animate-spin' : ''} />
+                  <span>{hasUpdate ? `更新 v${latestVersion}` : '檢查更新'}</span>
+                </button>
+
+                <button
+                  onClick={toggleTheme}
+                  aria-label="切換深淺主題"
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+              </div>
+            </div>
+
+            {/* 第二列：橫向完整 8 大功能導覽列（手機直接一鍵切換所有功能，與電腦版完全同步） */}
+            <nav
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                overflowX: 'auto',
+                padding: '4px 14px 10px',
+                scrollbarWidth: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}
+            >
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => hapticLight()}
+                    style={({ isActive }) => ({
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      padding: '6px 11px',
+                      borderRadius: 'var(--radius-full)',
+                      fontSize: '12px',
+                      fontWeight: isActive ? 700 : 500,
+                      whiteSpace: 'nowrap',
+                      textDecoration: 'none',
+                      flexShrink: 0,
+                      color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                      background: isActive
+                        ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
+                        : 'var(--bg-tertiary)',
+                      border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
+                      boxShadow: isActive ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none',
+                      transition: 'all 0.15s'
+                    })}
+                  >
+                    <Icon size={13} />
+                    <span>{item.shortLabel}</span>
+                  </NavLink>
+                );
+              })}
+            </nav>
+          </header>
+        ) : null}
+
         {/* 超支提醒橫幅 (可手動關閉，且只在首頁/預算頁) */}
         {overBudgetAlerts.length > 0 && (
           <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
@@ -149,4 +377,3 @@ export const AppShell: React.FC = () => {
     </div>
   );
 };
-

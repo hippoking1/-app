@@ -1,21 +1,32 @@
 import React, { useRef } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ReceiptText, TrendingUp, WalletCards, Plus, Sparkles } from 'lucide-react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { LayoutDashboard, ReceiptText, TrendingUp, WalletCards, Plus, Menu } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { hapticLight, hapticMedium } from '@/utils/haptics';
 
 export const BottomNav: React.FC = () => {
   const setTransactionModalOpen = useAppStore((s) => s.setTransactionModalOpen);
+  const isMobileMenuOpen = useAppStore((s) => s.isMobileMenuOpen);
+  const setMobileMenuOpen = useAppStore((s) => s.setMobileMenuOpen);
   const navigate = useNavigate();
+  const location = useLocation();
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLongPress = useRef(false);
 
-  const navItems = [
+  const leftItems = [
     { to: '/', label: '總覽', icon: LayoutDashboard },
-    { to: '/transactions', label: '明細', icon: ReceiptText },
+    { to: '/transactions', label: '明細', icon: ReceiptText }
+  ];
+
+  const rightItems = [
     { to: '/stocks', label: '股票', icon: TrendingUp },
     { to: '/accounts', label: '帳戶', icon: WalletCards }
   ];
+
+  // 當位於 AI、預算、分析、設定頁面時，右側「選單」按鈕高亮顯示
+  const isMoreRouteActive =
+    isMobileMenuOpen ||
+    ['/ai', '/budget', '/analytics', '/settings'].includes(location.pathname);
 
   const handleFabClick = () => {
     if (isLongPress.current) {
@@ -57,13 +68,13 @@ export const BottomNav: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        padding: '0 var(--space-2)',
+        padding: '0 var(--space-1)',
         zIndex: 50,
         paddingBottom: 'env(safe-area-inset-bottom, 0)'
       }}
     >
       {/* 前兩項 (總覽、明細) */}
-      {navItems.slice(0, 2).map((item) => {
+      {leftItems.map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
@@ -79,7 +90,7 @@ export const BottomNav: React.FC = () => {
               gap: '3px',
               textDecoration: 'none',
               color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: isActive ? 700 : 500,
               flex: 1,
               padding: '4px 0',
@@ -87,7 +98,7 @@ export const BottomNav: React.FC = () => {
               touchAction: 'manipulation'
             })}
           >
-            <Icon size={21} />
+            <Icon size={20} />
             <span>{item.label}</span>
           </NavLink>
         );
@@ -97,7 +108,7 @@ export const BottomNav: React.FC = () => {
       <div
         style={{
           position: 'relative',
-          top: '-16px',
+          top: '-14px',
           flex: 1,
           display: 'flex',
           justifyContent: 'center'
@@ -112,8 +123,8 @@ export const BottomNav: React.FC = () => {
           aria-label="快速記一筆（長按開啟 AI 記帳）"
           title="點擊：快速記帳 / 長按：AI 記帳"
           style={{
-            width: '54px',
-            height: '54px',
+            width: '52px',
+            height: '52px',
             borderRadius: '50%',
             background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
             border: '4px solid var(--bg-primary)',
@@ -129,12 +140,12 @@ export const BottomNav: React.FC = () => {
           onPointerDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
           onPointerUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <Plus size={28} strokeWidth={2.5} />
+          <Plus size={26} strokeWidth={2.5} />
         </button>
       </div>
 
       {/* 後兩項 (股票、帳戶) */}
-      {navItems.slice(2).map((item) => {
+      {rightItems.map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
@@ -150,7 +161,7 @@ export const BottomNav: React.FC = () => {
               gap: '3px',
               textDecoration: 'none',
               color: isActive ? 'var(--primary)' : 'var(--text-muted)',
-              fontSize: '12px',
+              fontSize: '11px',
               fontWeight: isActive ? 700 : 500,
               flex: 1,
               padding: '4px 0',
@@ -158,12 +169,39 @@ export const BottomNav: React.FC = () => {
               touchAction: 'manipulation'
             })}
           >
-            <Icon size={21} />
+            <Icon size={20} />
             <span>{item.label}</span>
           </NavLink>
         );
       })}
+
+      {/* 完整功能選單按鈕（開啟包含 AI 記帳、預算、分析、設定的完整側邊欄） */}
+      <button
+        onClick={() => {
+          hapticLight();
+          setMobileMenuOpen(!isMobileMenuOpen);
+        }}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '48px',
+          gap: '3px',
+          background: 'transparent',
+          border: 'none',
+          color: isMoreRouteActive ? 'var(--primary)' : 'var(--text-muted)',
+          fontSize: '11px',
+          fontWeight: isMoreRouteActive ? 700 : 500,
+          flex: 1,
+          padding: '4px 0',
+          cursor: 'pointer',
+          touchAction: 'manipulation'
+        }}
+      >
+        <Menu size={20} />
+        <span>完整選單</span>
+      </button>
     </div>
   );
 };
-

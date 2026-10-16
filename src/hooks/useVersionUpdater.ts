@@ -5,13 +5,12 @@ import { App as CapApp } from '@capacitor/app';
 import { useAppStore } from '@/stores/appStore';
 
 export const CURRENT_VERSION: string =
-  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.1.0';
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.1.2';
 export const CURRENT_BUILD_ID: string =
   typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'dev';
 export const CURRENT_BUILD_TIME: string =
   typeof __APP_BUILD_TIME__ !== 'undefined' ? __APP_BUILD_TIME__ : new Date().toISOString();
 
-const APP_LAUNCH_TIMESTAMP = Date.now();
 const APPLIED_BUILD_STORAGE_KEY = 'smart_expense_applied_build_id';
 const JUST_UPDATED_STORAGE_KEY = 'smart_expense_just_updated_to';
 const REMOTE_VERSION_FALLBACK_URL = 'https://hippoking1.github.io/-app/version.json';
@@ -95,22 +94,21 @@ function isUserCurrentlyBusy(): boolean {
 }
 
 /**
- * 判斷是否剛開啟 App 尚未進入深層操作（啟動 10 秒內且無開啟表單）
+ * 只要使用者目前沒有正在輸入表單，無論是剛啟動或從背景重開 App，皆立即自動套用更新
  */
 function shouldAutoApplySilently(): boolean {
-  const elapsedSinceLaunch = Date.now() - APP_LAUNCH_TIMESTAMP;
-  return elapsedSinceLaunch < 10000 && !isUserCurrentlyBusy();
+  return !isUserCurrentlyBusy();
 }
 
 /**
- * 執行清除快取並無縫更新重載
+ * 執行清除快取並強制穿透 WebView 快取無縫重載（免重新下載安裝 APK）
  */
 export async function applyAppUpdate(targetBuildId?: string, targetVersion?: string): Promise<void> {
   const store = useVersionStore.getState();
   if (store.isUpdating) return;
   store.setIsUpdating(true);
 
-  const buildToRecord = targetBuildId || store.latestBuildId || CURRENT_BUILD_ID;
+  const buildToRecord = targetBuildId || store.latestBuildId || `${CURRENT_VERSION}-${Date.now()}`;
   const versionToRecord = targetVersion || store.latestVersion || CURRENT_VERSION;
 
   try {
@@ -121,14 +119,18 @@ export async function applyAppUpdate(targetBuildId?: string, targetVersion?: str
   }
 
   // 短暫顯示更新過渡動畫，讓使用者感知正在套用新版
-  await new Promise((r) => setTimeout(r, 650));
+  await new Promise((r) => setTimeout(r, 550));
 
   try {
     if (swUpdateFn) {
-      await swUpdateFn(true);
+      await swUpdateFn(false);
+    }
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((reg) => reg.update().catch(() => {})));
     }
   } catch {
-    // 若 SW 更新失敗則繼續走快取清理與硬重載
+    // 忽略 SW 錯誤
   }
 
   try {
@@ -145,7 +147,14 @@ export async function applyAppUpdate(targetBuildId?: string, targetVersion?: str
     return;
   }
 
-  window.location.reload();
+  // 透過在網址附加最新 buildId 參數 (_v)，強制 Android APK WebView 與瀏覽器穿透本地快取抓最新 index.html
+  try {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set('_v', buildToRecord);
+    window.location.replace(nextUrl.toString());
+  } catch {
+    window.location.reload();
+  }
 }
 
 /**
@@ -167,12 +176,12 @@ function compareSemver(remoteVer: string, localVer: string): number {
 /**
  * 向遠端與 Service Worker 檢查是否有新版本
  */
-export async function checkRemoteVersion(manual = false): Promise<boolean> {
+export async function checkRemoteVersion(forceImmediate = false): Promise<boolean> {
   const store = useVersionStore.getState();
   if (store.isChecking || store.isUpdating) return false;
 
   const now = Date.now();
-  if (!manual && now - lastCheckTimestamp < 15000) {
+  if (!forceImmediate && now - lastCheckTimestamp < 5000) {
     return store.hasUpdate;
   }
   lastCheckTimestamp = now;
@@ -185,7 +194,7 @@ export async function checkRemoteVersion(manual = false): Promise<boolean> {
       swRegistrationRef.update().catch(() => {});
     }
 
-    // 2. 請求遠端 version.json (加上時間戳穿透 CDN/瀏覽器快取)
+    // 2. 請求遠端 version.json (加上時間戳穿透 CDN/WebView 快取)
     const candidateUrls: string[] = [];
     if (typeof window !== 'undefined' && window.location.protocol.startsWith('http')) {
       const basePath = window.location.pathname.endsWith('/')
@@ -235,7 +244,7 @@ export async function checkRemoteVersion(manual = false): Promise<boolean> {
       store.setUpdateAvailable(manifest.version, manifest.buildId);
       store.setIsChecking(false);
 
-      // 若是剛開啟 App 且尚未開始輸入操作，直接智慧無感自動更新
+      // 若未在輸入表單中，立即自動無縫更新重載（免重新安裝 APK）
       if (shouldAutoApplySilently()) {
         await applyAppUpdate(manifest.buildId, manifest.version);
       }
@@ -282,6 +291,7 @@ export function useVersionUpdater() {
           onRegisteredSW(_swUrl, registration) {
             if (registration) {
               swRegistrationRef = registration;
+              registration.update().catch(() => {});
             }
           },
           onNeedRefresh() {
@@ -300,27 +310,35 @@ export function useVersionUpdater() {
       }
     }
 
-    // 1. 開啟 App 時立即執行第一次版本檢查
-    checkRemoteVersion(false);
+    // 1. 開啟 App 時立即強制執行版本檢查
+    checkRemoteVersion(true);
 
-    // 2. 當視窗從背景切回前景時自動檢查
+    // 2. 當視窗或手機 App 從背景重新開啟/切回前景時，立即強制檢查更新
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkRemoteVersion(false);
+        checkRemoteVersion(true);
       }
     };
     const handleWindowFocus = () => {
-      checkRemoteVersion(false);
+      checkRemoteVersion(true);
+    };
+    const handlePageShow = () => {
+      checkRemoteVersion(true);
+    };
+    const handleCordovaResume = () => {
+      checkRemoteVersion(true);
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('resume', handleCordovaResume);
     window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('pageshow', handlePageShow);
 
-    // 3. 原生 Capacitor App 切回前景時自動檢查
+    // 3. 原生 Capacitor App 切回前景時立即強制檢查更新
     let removeCapListener: (() => void) | undefined;
     CapApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
-        checkRemoteVersion(false);
+        checkRemoteVersion(true);
       }
     })
       .then((listener) => {
@@ -328,16 +346,18 @@ export function useVersionUpdater() {
       })
       .catch(() => {});
 
-    // 4. 每 15 分鐘定時背景巡檢
+    // 4. 每 5 分鐘定時背景巡檢
     const intervalId = window.setInterval(() => {
       if (document.visibilityState === 'visible') {
         checkRemoteVersion(false);
       }
-    }, 15 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('resume', handleCordovaResume);
       window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('pageshow', handlePageShow);
       removeCapListener?.();
       window.clearInterval(intervalId);
     };

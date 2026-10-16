@@ -42,11 +42,13 @@ interface AppState {
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
 
-  // 快速 Modal 開關
+  // 快速 Modal 與行動端完整選單抽屜開關
   isTransactionModalOpen: boolean;
   setTransactionModalOpen: (open: boolean) => void;
   isStockModalOpen: boolean;
   setStockModalOpen: (open: boolean) => void;
+  isMobileMenuOpen: boolean;
+  setMobileMenuOpen: (open: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -99,5 +101,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   setTransactionModalOpen: (isTransactionModalOpen) => set({ isTransactionModalOpen }),
 
   isStockModalOpen: false,
-  setStockModalOpen: (isStockModalOpen) => set({ isStockModalOpen })
+  setStockModalOpen: (isStockModalOpen) => set({ isStockModalOpen }),
+
+  isMobileMenuOpen: false,
+  setMobileMenuOpen: (isMobileMenuOpen) => set({ isMobileMenuOpen })
 }));

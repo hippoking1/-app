@@ -14,7 +14,8 @@ import {
   ChevronRight,
   LogOut,
   Moon,
-  Sun
+  Sun,
+  X
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
 import { useTotalNetWorth } from '@/hooks/useFirestore';
@@ -22,7 +23,23 @@ import { formatCurrency } from '@/utils/analytics';
 import { logout } from '@/services/auth';
 import { CURRENT_VERSION } from '@/hooks/useVersionUpdater';
 
-export const Sidebar: React.FC = () => {
+export const NAV_ITEMS = [
+  { to: '/', label: '財務總覽', shortLabel: '總覽', icon: LayoutDashboard },
+  { to: '/transactions', label: '收支明細', shortLabel: '明細', icon: ReceiptText },
+  { to: '/ai', label: 'AI 智能記帳', shortLabel: 'AI 記帳', icon: Sparkles, highlight: true },
+  { to: '/stocks', label: '股票投資', shortLabel: '股票', icon: TrendingUp },
+  { to: '/budget', label: '預算管理', shortLabel: '預算', icon: Target },
+  { to: '/analytics', label: '花費分析', shortLabel: '分析', icon: PieChart },
+  { to: '/accounts', label: '帳戶資產', shortLabel: '帳戶', icon: WalletCards },
+  { to: '/settings', label: '系統設定', shortLabel: '設定', icon: Settings }
+];
+
+interface SidebarProps {
+  isMobileDrawer?: boolean;
+  onCloseMobile?: () => void;
+}
+
+export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onCloseMobile }) => {
   const {
     user,
     theme,
@@ -33,46 +50,42 @@ export const Sidebar: React.FC = () => {
   } = useAppStore();
   const { totalNetWorth } = useTotalNetWorth();
 
-  const navItems = [
-    { to: '/', label: '財務總覽', icon: LayoutDashboard },
-    { to: '/transactions', label: '收支明細', icon: ReceiptText },
-    { to: '/ai', label: 'AI 智能記帳', icon: Sparkles, highlight: true },
-    { to: '/stocks', label: '股票投資', icon: TrendingUp },
-    { to: '/budget', label: '預算管理', icon: Target },
-    { to: '/analytics', label: '花費分析', icon: PieChart },
-    { to: '/accounts', label: '帳戶資產', icon: WalletCards },
-    { to: '/settings', label: '系統設定', icon: Settings }
-  ];
+  const collapsed = isMobileDrawer ? false : isSidebarCollapsed;
 
   return (
     <aside
       style={{
-        width: isSidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
+        width: isMobileDrawer
+          ? '280px'
+          : collapsed
+            ? 'var(--sidebar-collapsed-width)'
+            : 'var(--sidebar-width)',
         backgroundColor: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',
         height: '100vh',
-        position: 'sticky',
+        position: isMobileDrawer ? 'relative' : 'sticky',
         top: 0,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-        zIndex: 40,
-        overflow: 'hidden'
+        zIndex: isMobileDrawer ? 1001 : 40,
+        overflowY: 'auto',
+        overflowX: 'hidden'
       }}
     >
-      {/* 頂部 LOGO 與 收合按鈕 */}
+      {/* 頂部 LOGO 與 收合/關閉按鈕 */}
       <div>
         <div
           style={{
             padding: 'var(--space-5) var(--space-4)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: isSidebarCollapsed ? 'center' : 'space-between',
+            justifyContent: collapsed ? 'center' : 'space-between',
             borderBottom: '1px solid var(--border)'
           }}
         >
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div
                 style={{
@@ -108,30 +121,53 @@ export const Sidebar: React.FC = () => {
               </div>
             </div>
           )}
-          <button
-            onClick={toggleSidebar}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '6px',
-              borderRadius: 'var(--radius-sm)',
-              display: 'flex',
-              alignItems: 'center'
-            }}
-          >
-            {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          </button>
+
+          {isMobileDrawer ? (
+            <button
+              onClick={onCloseMobile}
+              aria-label="關閉選單"
+              style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              <X size={18} />
+            </button>
+          ) : (
+            <button
+              onClick={toggleSidebar}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: 'var(--radius-sm)',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+            >
+              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </button>
+          )}
         </div>
 
         {/* 快速新增記帳按鈕 */}
         <div style={{ padding: 'var(--space-3) var(--space-3)' }}>
           <button
-            onClick={() => setTransactionModalOpen(true)}
+            onClick={() => {
+              onCloseMobile?.();
+              setTransactionModalOpen(true);
+            }}
             style={{
               width: '100%',
-              padding: isSidebarCollapsed ? '10px 0' : '10px 16px',
+              padding: collapsed ? '10px 0' : '10px 16px',
               borderRadius: 'var(--radius-md)',
               background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
               color: '#ffffff',
@@ -148,18 +184,19 @@ export const Sidebar: React.FC = () => {
             }}
           >
             <Plus size={18} />
-            {!isSidebarCollapsed && <span>快速記一筆</span>}
+            {!collapsed && <span>快速記一筆</span>}
           </button>
         </div>
 
         {/* 導航連結列表 */}
         <nav style={{ padding: 'var(--space-2) var(--space-3)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {navItems.map((item) => {
+          {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={() => onCloseMobile?.()}
                 style={({ isActive }) => ({
                   display: 'flex',
                   alignItems: 'center',
@@ -173,11 +210,11 @@ export const Sidebar: React.FC = () => {
                   backgroundColor: isActive ? 'var(--primary-glow)' : 'transparent',
                   border: isActive ? '1px solid var(--border-focus)' : '1px solid transparent',
                   transition: 'all 0.15s',
-                  justifyContent: isSidebarCollapsed ? 'center' : 'flex-start'
+                  justifyContent: collapsed ? 'center' : 'flex-start'
                 })}
               >
                 <Icon size={18} color={item.highlight ? 'var(--purple)' : undefined} />
-                {!isSidebarCollapsed && <span>{item.label}</span>}
+                {!collapsed && <span>{item.label}</span>}
               </NavLink>
             );
           })}
@@ -192,7 +229,7 @@ export const Sidebar: React.FC = () => {
           backgroundColor: 'var(--bg-tertiary)'
         }}
       >
-        {!isSidebarCollapsed && (
+        {!collapsed && (
           <div style={{ marginBottom: 'var(--space-3)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
               淨資產估計
@@ -207,11 +244,11 @@ export const Sidebar: React.FC = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: isSidebarCollapsed ? 'center' : 'space-between',
+            justifyContent: collapsed ? 'center' : 'space-between',
             gap: '8px'
           }}
         >
-          {!isSidebarCollapsed && (
+          {!collapsed && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
               <div
                 style={{
@@ -224,7 +261,8 @@ export const Sidebar: React.FC = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontWeight: 700,
-                  fontSize: '13px'
+                  fontSize: '13px',
+                  flexShrink: 0
                 }}
               >
                 {user?.displayName ? user.displayName.slice(0, 1) : '訪'}
@@ -267,7 +305,10 @@ export const Sidebar: React.FC = () => {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
             <button
-              onClick={() => logout()}
+              onClick={() => {
+                onCloseMobile?.();
+                logout();
+              }}
               title="登出"
               style={{
                 background: 'transparent',
