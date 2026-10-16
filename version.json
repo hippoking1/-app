@@ -1,7 +1,7 @@
 {
-  "version": "1.1.1",
-  "buildId": "1.1.1-202610160113",
-  "buildTime": "2026-10-16T01:13:50.991Z",
+  "version": "1.1.2",
+  "buildId": "1.1.2-202610160130",
+  "buildTime": "2026-10-16T01:30:53.573Z",
   "minNativeVersion": "1.0.0",
   "downloadUrls": {
     "windows": "https://github.com/hippoking1/-app/releases/latest",
