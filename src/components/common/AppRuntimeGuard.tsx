@@ -153,7 +153,7 @@ export const AppRuntimeGuard: React.FC = () => {
       <div
         style={{
           position: 'fixed',
-          top: '16px',
+          top: 'calc(var(--safe-top, 52px) + 10px)',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9990,

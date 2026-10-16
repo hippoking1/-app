@@ -71,7 +71,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
         transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
         zIndex: isMobileDrawer ? 1001 : 40,
         overflowY: 'auto',
-        overflowX: 'hidden'
+        overflowX: 'hidden',
+        paddingTop: isMobileDrawer ? 'var(--safe-top, max(env(safe-area-inset-top, 0px), 52px))' : 0,
+        paddingBottom: isMobileDrawer ? 'var(--safe-bottom, max(env(safe-area-inset-bottom, 0px), 16px))' : 0
       }}
     >
       {/* 頂部 LOGO 與 收合/關閉按鈕 */}

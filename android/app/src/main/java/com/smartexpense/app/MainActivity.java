@@ -99,14 +99,15 @@ public class MainActivity extends BridgeActivity {
             ViewGroup.LayoutParams.MATCH_PARENT
         ));
 
-        // 頂部導覽列（提供返回關閉按鈕與標題）
+        // 頂部導覽列（預留狀態列高度並提供返回關閉按鈕與標題）
         int dp12 = dpToPx(12);
         int dp16 = dpToPx(16);
+        int dp48 = dpToPx(48);
         LinearLayout header = new LinearLayout(MainActivity.this);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setBackgroundColor(Color.parseColor("#0f172a"));
-        header.setPadding(dp16, dp12, dp16, dp12);
+        header.setPadding(dp16, dp48, dp16, dp12);
 
         TextView titleView = new TextView(MainActivity.this);
         titleView.setText("Google 帳號安全登入");

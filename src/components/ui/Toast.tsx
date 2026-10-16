@@ -11,7 +11,7 @@ export const ToastContainer: React.FC = () => {
     <div
       style={{
         position: 'fixed',
-        top: '20px',
+        top: 'calc(var(--safe-top, 52px) + 12px)',
         right: '20px',
         zIndex: 9999,
         display: 'flex',

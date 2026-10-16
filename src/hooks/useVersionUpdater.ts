@@ -5,7 +5,7 @@ import { App as CapApp } from '@capacitor/app';
 import { useAppStore } from '@/stores/appStore';
 
 export const CURRENT_VERSION: string =
-  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.1.2';
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '1.1.3';
 export const CURRENT_BUILD_ID: string =
   typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'dev';
 export const CURRENT_BUILD_TIME: string =

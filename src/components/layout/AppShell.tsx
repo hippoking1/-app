@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate, useLocation, NavLink } from 'react-router-dom';
-import { Sidebar, NAV_ITEMS } from './Sidebar';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
+import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { ToastContainer } from '@/components/ui/Toast';
 import { Modal } from '@/components/ui/Modal';
@@ -169,26 +169,26 @@ export const AppShell: React.FC = () => {
 
       {/* 主內容展示區域 */}
       <div className="main-content">
-        {/* 行動端專屬頂部導覽列 + 8 大完整功能橫向快捷列 */}
+        {/* 行動端專屬頂部導覽列：預留 52px+ 頂部安全距離，徹底避開手機系統狀態列與挖孔鏡頭 */}
         {!isDesktop ? (
           <header
             style={{
               position: 'sticky',
               top: 0,
               zIndex: 45,
+              paddingTop: 'var(--safe-top, max(env(safe-area-inset-top, 0px), 52px))',
               backgroundColor: 'var(--bg-glass-heavy)',
               backdropFilter: 'blur(18px)',
               WebkitBackdropFilter: 'blur(18px)',
               borderBottom: '1px solid var(--border)'
             }}
           >
-            {/* 第一列：選單按鈕、標題版本號、一鍵更新檢查、主題切換 */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px 8px'
+                padding: '10px 14px'
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -200,20 +200,21 @@ export const AppShell: React.FC = () => {
                   aria-label="開啟完整功能選單"
                   style={{
                     background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border)',
+                    border: '1px solid var(--border-focus)',
                     color: 'var(--text-primary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '6px 8px',
+                    padding: '7px 10px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '5px',
+                    gap: '6px',
                     cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 700
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    touchAction: 'manipulation'
                   }}
                 >
-                  <Menu size={17} color="var(--primary)" />
-                  <span>選單</span>
+                  <Menu size={18} color="var(--primary)" />
+                  <span>功能選單</span>
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -249,7 +250,7 @@ export const AppShell: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   onClick={handleQuickUpdateCheck}
                   title="檢查並同步最新版本"
@@ -258,16 +259,17 @@ export const AppShell: React.FC = () => {
                     border: '1px solid var(--border)',
                     color: hasUpdate ? '#ffffff' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '5px 8px',
+                    padding: '6px 10px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '11px',
+                    gap: '5px',
+                    fontSize: '12px',
                     fontWeight: 600,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    touchAction: 'manipulation'
                   }}
                 >
-                  <RefreshCw size={13} className={isCheckingVersion ? 'animate-spin' : ''} />
+                  <RefreshCw size={14} className={isCheckingVersion ? 'animate-spin' : ''} />
                   <span>{hasUpdate ? `更新 v${latestVersion}` : '檢查更新'}</span>
                 </button>
 
@@ -279,62 +281,17 @@ export const AppShell: React.FC = () => {
                     border: '1px solid var(--border)',
                     color: 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '6px',
+                    padding: '7px',
                     display: 'flex',
                     alignItems: 'center',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    touchAction: 'manipulation'
                   }}
                 >
-                  {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
                 </button>
               </div>
             </div>
-
-            {/* 第二列：橫向完整 8 大功能導覽列（手機直接一鍵切換所有功能，與電腦版完全同步） */}
-            <nav
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                overflowX: 'auto',
-                padding: '4px 14px 10px',
-                scrollbarWidth: 'none',
-                WebkitOverflowScrolling: 'touch'
-              }}
-            >
-              {NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    onClick={() => hapticLight()}
-                    style={({ isActive }) => ({
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      padding: '6px 11px',
-                      borderRadius: 'var(--radius-full)',
-                      fontSize: '12px',
-                      fontWeight: isActive ? 700 : 500,
-                      whiteSpace: 'nowrap',
-                      textDecoration: 'none',
-                      flexShrink: 0,
-                      color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                      background: isActive
-                        ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)'
-                        : 'var(--bg-tertiary)',
-                      border: isActive ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      boxShadow: isActive ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none',
-                      transition: 'all 0.15s'
-                    })}
-                  >
-                    <Icon size={13} />
-                    <span>{item.shortLabel}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
           </header>
         ) : null}
 
@@ -353,7 +310,7 @@ export const AppShell: React.FC = () => {
         <Outlet />
       </div>
 
-      {/* 行動端才 mount BottomNav */}
+      {/* 行動端底部完整導覽列 (包含 8 大功能快捷列 + 主導覽列) */}
       {!isDesktop ? (
         <div className="bottom-nav-mobile-wrapper">
           <BottomNav />
