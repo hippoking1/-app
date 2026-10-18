@@ -79,7 +79,7 @@
   --sidebar-width: 260px;
   --sidebar-collapsed-width: 76px;
   --header-height: 64px;
-  --bottom-nav-height: 112px;
+  --bottom-nav-height: 68px;
   --safe-top: max(env(safe-area-inset-top, 0px), 52px);
   --safe-bottom: max(env(safe-area-inset-bottom, 0px), 14px);
   

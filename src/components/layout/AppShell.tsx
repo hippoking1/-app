@@ -169,7 +169,7 @@ export const AppShell: React.FC = () => {
 
       {/* 主內容展示區域 */}
       <div className="main-content">
-        {/* 行動端專屬頂部導覽列：預留 52px+ 頂部安全距離，徹底避開手機系統狀態列與挖孔鏡頭 */}
+        {/* 行動端專屬頂部導覽列：單行俐落排版、不換行、唯一選單入口 */}
         {!isDesktop ? (
           <header
             style={{
@@ -188,61 +188,67 @@ export const AppShell: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '10px 14px'
+                height: '52px',
+                padding: '0 14px',
+                gap: '8px'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {/* 左側：側邊欄選單按鈕 + 品牌標題與版本號 (強制單行不折行) */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                 <button
                   onClick={() => {
                     hapticLight();
                     setMobileMenuOpen(true);
                   }}
-                  aria-label="開啟完整功能選單"
+                  aria-label="開啟功能選單"
+                  title="開啟完整功能選單"
                   style={{
+                    width: '36px',
+                    height: '36px',
                     background: 'var(--bg-tertiary)',
                     border: '1px solid var(--border-focus)',
                     color: 'var(--text-primary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '7px 10px',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    justifyContent: 'center',
                     cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: 700,
+                    flexShrink: 0,
                     touchAction: 'manipulation'
                   }}
                 >
-                  <Menu size={18} color="var(--primary)" />
-                  <span>功能選單</span>
+                  <Menu size={19} color="var(--primary)" />
                 </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
                   <div
                     style={{
-                      width: '26px',
-                      height: '26px',
-                      borderRadius: '7px',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '8px',
                       background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      color: '#ffffff'
+                      color: '#ffffff',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)'
                     }}
                   >
-                    <Sparkles size={14} />
+                    <Sparkles size={15} />
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
                     智慧記帳
                   </span>
                   <span
                     className="font-mono"
                     style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       color: 'var(--text-muted)',
                       backgroundColor: 'var(--bg-tertiary)',
-                      padding: '1px 5px',
-                      borderRadius: '4px'
+                      padding: '2px 6px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border)'
                     }}
                   >
                     v{CURRENT_VERSION}
@@ -250,40 +256,48 @@ export const AppShell: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* 右側：精簡圖示按鈕（檢查更新、深淺主題切換） */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <button
                   onClick={handleQuickUpdateCheck}
-                  title="檢查並同步最新版本"
+                  aria-label="檢查版本更新"
+                  title={hasUpdate ? `立即更新至 v${latestVersion}` : '檢查版本更新'}
                   style={{
+                    height: '36px',
+                    padding: hasUpdate ? '0 10px' : '0 9px',
                     background: hasUpdate ? 'var(--primary)' : 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
                     color: hasUpdate ? '#ffffff' : 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '6px 10px',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     gap: '5px',
                     fontSize: '12px',
                     fontWeight: 600,
+                    whiteSpace: 'nowrap',
                     cursor: 'pointer',
                     touchAction: 'manipulation'
                   }}
                 >
-                  <RefreshCw size={14} className={isCheckingVersion ? 'animate-spin' : ''} />
-                  <span>{hasUpdate ? `更新 v${latestVersion}` : '檢查更新'}</span>
+                  <RefreshCw size={15} className={isCheckingVersion ? 'animate-spin' : ''} />
+                  {hasUpdate ? <span>更新 v{latestVersion}</span> : null}
                 </button>
 
                 <button
                   onClick={toggleTheme}
                   aria-label="切換深淺主題"
+                  title="切換深淺主題"
                   style={{
+                    width: '36px',
+                    height: '36px',
                     background: 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
                     color: 'var(--text-secondary)',
                     borderRadius: 'var(--radius-sm)',
-                    padding: '7px',
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: 'pointer',
                     touchAction: 'manipulation'
                   }}
@@ -310,7 +324,7 @@ export const AppShell: React.FC = () => {
         <Outlet />
       </div>
 
-      {/* 行動端底部完整導覽列 (包含 8 大功能快捷列 + 主導覽列) */}
+      {/* 行動端底部對稱 5 欄導覽列 */}
       {!isDesktop ? (
         <div className="bottom-nav-mobile-wrapper">
           <BottomNav />
