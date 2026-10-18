@@ -26,6 +26,7 @@ export const AppShell: React.FC = () => {
   const theme = useAppStore((s) => s.theme);
   const toggleTheme = useAppStore((s) => s.toggleTheme);
   const addToast = useAppStore((s) => s.addToast);
+  const isSidebarCollapsed = useAppStore((s) => s.isSidebarCollapsed);
 
   const isCheckingVersion = useVersionStore((s) => s.isChecking);
   const hasUpdate = useVersionStore((s) => s.hasUpdate);
@@ -135,9 +136,16 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="app-container">
-      {/* 桌面端固定顯示左側完整功能欄 Sidebar */}
+      {/* 桌面端固定顯示左側完整功能欄 Sidebar (預留對應寬度，Sidebar 本體採用 position: fixed 鎖定視窗) */}
       {isDesktop ? (
-        <div className="sidebar-desktop-wrapper">
+        <div
+          className="sidebar-desktop-wrapper"
+          style={{
+            width: isSidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
+            flexShrink: 0,
+            transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
           <Sidebar />
         </div>
       ) : null}

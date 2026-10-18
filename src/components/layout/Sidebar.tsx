@@ -63,28 +63,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
         backgroundColor: 'var(--bg-secondary)',
         borderRight: '1px solid var(--border)',
         height: '100vh',
-        position: isMobileDrawer ? 'relative' : 'sticky',
+        position: 'fixed',
         top: 0,
+        left: 0,
+        bottom: 0,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
         transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-        zIndex: isMobileDrawer ? 1001 : 40,
-        overflowY: 'auto',
-        overflowX: 'hidden',
+        zIndex: isMobileDrawer ? 1001 : 50,
+        overflow: 'hidden',
         paddingTop: isMobileDrawer ? 'var(--safe-top, max(env(safe-area-inset-top, 0px), 52px))' : 0,
         paddingBottom: isMobileDrawer ? 'var(--safe-bottom, max(env(safe-area-inset-bottom, 0px), 16px))' : 0
       }}
     >
-      {/* 頂部 LOGO 與 收合/關閉按鈕 */}
-      <div>
+      {/* 頂部 LOGO、快速記帳按鈕與導航列表 */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
         <div
           style={{
             padding: 'var(--space-5) var(--space-4)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'space-between',
-            borderBottom: '1px solid var(--border)'
+            borderBottom: '1px solid var(--border)',
+            flexShrink: 0
           }}
         >
           {!collapsed && (
@@ -161,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
         </div>
 
         {/* 快速新增記帳按鈕 */}
-        <div style={{ padding: 'var(--space-3) var(--space-3)' }}>
+        <div style={{ padding: 'var(--space-3) var(--space-3)', flexShrink: 0 }}>
           <button
             onClick={() => {
               onCloseMobile?.();
@@ -191,7 +193,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
         </div>
 
         {/* 導航連結列表 */}
-        <nav style={{ padding: 'var(--space-2) var(--space-3)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <nav
+          style={{
+            padding: 'var(--space-2) var(--space-3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden'
+          }}
+        >
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             return (
@@ -212,7 +224,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
                   backgroundColor: isActive ? 'var(--primary-glow)' : 'transparent',
                   border: isActive ? '1px solid var(--border-focus)' : '1px solid transparent',
                   transition: 'all 0.15s',
-                  justifyContent: collapsed ? 'center' : 'flex-start'
+                  justifyContent: collapsed ? 'center' : 'flex-start',
+                  flexShrink: 0
                 })}
               >
                 <Icon size={18} color={item.highlight ? 'var(--purple)' : undefined} />
@@ -228,7 +241,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
         style={{
           padding: 'var(--space-4)',
           borderTop: '1px solid var(--border)',
-          backgroundColor: 'var(--bg-tertiary)'
+          backgroundColor: 'var(--bg-tertiary)',
+          flexShrink: 0
         }}
       >
         {!collapsed && (
