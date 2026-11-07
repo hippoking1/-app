@@ -357,21 +357,43 @@ export const Travel: React.FC = () => {
         </div>
       </div>
 
-      {/* 1. 逛街隨身即時匯率換算機 (Quick FX Calculator) */}
+      {/* 1. 逛街隨身即時匯率換算機 (Quick FX Calculator - 現代雙幣兌換 UX) */}
       <Card
         glass
         padding="lg"
         style={{
           border: '1px solid var(--border-focus)',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.04) 100%)'
+          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.05) 100%)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '16px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+        {/* 卡片標題與最新匯率更新按鈕 */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Calculator size={18} color="var(--primary)" />
-            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              🧮 逛街隨身即時匯率計算機
-            </span>
+            <div
+              style={{
+                width: '30px',
+                height: '30px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                color: 'var(--primary-light)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Calculator size={18} />
+            </div>
+            <div>
+              <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                逛街隨身即時匯率計算機
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                出國掃街換算神器
+              </span>
+            </div>
           </div>
 
           <button
@@ -382,14 +404,15 @@ export const Travel: React.FC = () => {
               background: 'var(--bg-tertiary)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-sm)',
-              padding: '4px 8px',
+              padding: '5px 10px',
               color: 'var(--text-secondary)',
               fontSize: '11px',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '5px',
+              transition: 'all 0.15s'
             }}
           >
             <RefreshCw size={12} className={isUpdatingCalcRate ? 'animate-spin' : ''} />
@@ -397,148 +420,242 @@ export const Travel: React.FC = () => {
           </button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', alignItems: 'center' }}>
-          {/* 左側：外幣選擇與輸入 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <CurrencySelector
-              selectedCurrency={calcCurrency}
-              onSelectCurrency={handleCalcCurrencyChange}
-              includeTWD={false}
-            />
-
-            <div style={{ position: 'relative' }}>
-              <span
-                style={{
-                  position: 'absolute',
-                  left: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  fontSize: '18px',
-                  fontWeight: 800,
-                  color: 'var(--primary)'
-                }}
-              >
-                {calcCurrencyInfo.symbol}
-              </span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={calcAmount}
-                onChange={(e) => setCalcAmount(e.target.value)}
-                placeholder="輸入當地標價..."
-                style={{
-                  width: '100%',
-                  padding: '10px 12px 10px 42px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-md)',
-                  color: 'var(--text-primary)',
-                  fontSize: '20px',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none'
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
-              <span>
-                匯率：1 {calcCurrency} ≈{' '}
-                {isCustomCalcRate ? (
-                  <input
-                    type="number"
-                    step="any"
-                    value={calcRate}
-                    onChange={(e) => setCalcRate(parseFloat(e.target.value) || 0)}
-                    style={{
-                      width: '65px',
-                      padding: '1px 3px',
-                      borderRadius: '3px',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-primary)',
-                      fontSize: '11px'
-                    }}
-                  />
-                ) : (
-                  <strong style={{ color: 'var(--text-primary)' }}>{formatExchangeRate(calcRate)}</strong>
-                )}{' '}
-                NT$
-              </span>
-              <button
-                type="button"
-                onClick={() => setIsCustomCalcRate(!isCustomCalcRate)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--primary-light)',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  textDecoration: 'underline'
-                }}
-              >
-                {isCustomCalcRate ? '完成' : '微調匯率'}
-              </button>
-            </div>
-          </div>
-
-          {/* 右側：折合台幣結果與一鍵記帳 */}
+        {/* 雙幣轉換卡片（上下流向：支付當地貨幣 ➔ 換算折合台幣） */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* 上卡：當地外幣輸入卡（水平膠囊無重疊結構） */}
           <div
             style={{
               backgroundColor: 'var(--bg-secondary)',
-              borderRadius: 'var(--radius-md)',
-              padding: '14px',
-              border: '1px dashed var(--border-focus)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '12px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '6px'
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>即時折合台幣</span>
-              <div className="font-mono" style={{ fontSize: '26px', fontWeight: 900, color: 'var(--income)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>
+                當地標價 (外幣支付)
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--primary-light)', fontWeight: 600 }}>
+                {calcCurrencyInfo.name} ({calcCurrencyInfo.symbol})
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* 幣別徽章膠囊 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-focus)',
+                  flexShrink: 0
+                }}
+              >
+                <span style={{ fontSize: '20px', lineHeight: 1 }}>{calcCurrencyInfo.flag}</span>
+                <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                  {calcCurrencyInfo.code}
+                </span>
+              </div>
+
+              {/* 大字數字輸入框 (右對齊、無 absolute 遮擋，零重疊) */}
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                value={calcAmount}
+                onChange={(e) => setCalcAmount(e.target.value)}
+                placeholder="輸入當地標價金額..."
+                style={{
+                  width: '100%',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '26px',
+                  fontWeight: 900,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--text-primary)',
+                  textAlign: 'right',
+                  padding: 0
+                }}
+              />
+            </div>
+          </div>
+
+          {/* 中繼：匯率指示與微調列 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '4px 12px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ color: 'var(--primary-light)', fontWeight: 800 }}>⇄ 參考匯率：</span>
+              <span>1 {calcCurrency} ≈ </span>
+              {isCustomCalcRate ? (
+                <input
+                  type="number"
+                  step="any"
+                  value={calcRate}
+                  onChange={(e) => setCalcRate(parseFloat(e.target.value) || 0)}
+                  style={{
+                    width: '75px',
+                    padding: '2px 5px',
+                    borderRadius: '4px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--primary)',
+                    color: 'var(--text-primary)',
+                    fontSize: '12px',
+                    fontWeight: 700
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>
+                  {formatExchangeRate(calcRate)}
+                </strong>
+              )}
+              <span>NT$</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsCustomCalcRate(!isCustomCalcRate)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--primary-light)',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                textDecoration: 'underline'
+              }}
+            >
+              {isCustomCalcRate ? '完成微調' : '微調匯率'}
+            </button>
+          </div>
+
+          {/* 下卡：折合台幣結果卡 */}
+          <div
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '14px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>
+                即時折合台幣 (實付成本)
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--income)', fontWeight: 700 }}>
+                新台幣 (TWD)
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {/* TWD 膠囊 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  padding: '6px 12px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  flexShrink: 0
+                }}
+              >
+                <span style={{ fontSize: '20px', lineHeight: 1 }}>🇹🇼</span>
+                <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--income)' }}>
+                  TWD
+                </span>
+              </div>
+
+              {/* 大字折算結果 */}
+              <div
+                className="font-mono"
+                style={{
+                  fontSize: '28px',
+                  fontWeight: 900,
+                  color: 'var(--income)',
+                  textAlign: 'right'
+                }}
+              >
                 NT$ {calcConversion.totalTWD.toLocaleString()}
               </div>
             </div>
 
             {/* 海外刷卡 1.5% 手續費 Toggle */}
             <div
+              onClick={() => setIsCalcCardFee(!isCalcCardFee)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '6px 8px',
+                padding: '8px 12px',
                 backgroundColor: 'var(--bg-tertiary)',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '11px'
+                borderRadius: 'var(--radius-md)',
+                fontSize: '12px',
+                cursor: 'pointer',
+                userSelect: 'none',
+                border: '1px solid var(--border)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)' }}>
-                <CreditCard size={13} color="var(--purple)" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                <CreditCard size={14} color="var(--purple)" />
                 <span>加計海外刷卡 1.5% 手續費</span>
                 {isCalcCardFee && calcConversion.feeTWD > 0 && (
-                  <span style={{ color: 'var(--expense)' }}>(+NT$ {calcConversion.feeTWD})</span>
+                  <span style={{ color: 'var(--expense)', fontWeight: 700 }}>
+                    (+NT$ {calcConversion.feeTWD.toLocaleString()})
+                  </span>
                 )}
               </div>
               <input
                 type="checkbox"
                 checked={isCalcCardFee}
                 onChange={(e) => setIsCalcCardFee(e.target.checked)}
-                style={{ accentColor: 'var(--primary)', cursor: 'pointer' }}
+                onClick={(e) => e.stopPropagation()}
+                style={{ accentColor: 'var(--primary)', cursor: 'pointer', width: '15px', height: '15px' }}
               />
             </div>
-
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleUseCalcForTransaction}
-              icon={<Sparkles size={14} />}
-              style={{ width: '100%' }}
-            >
-              ⚡ 直接將此金額帶入快速記帳
-            </Button>
           </div>
         </div>
+
+        {/* 常用貨幣快捷列 (可快速切換外幣與自由增刪) */}
+        <div>
+          <CurrencySelector
+            selectedCurrency={calcCurrency}
+            onSelectCurrency={handleCalcCurrencyChange}
+            includeTWD={false}
+            label="常用貨幣快速切換"
+          />
+        </div>
+
+        {/* 快速帶入記帳按鈕 */}
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleUseCalcForTransaction}
+          icon={<Sparkles size={16} />}
+          style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 800 }}
+        >
+          ⚡ 直接將此金額帶入快速記帳
+        </Button>
       </Card>
 
       {/* 2. 旅程選擇切換標籤與「旅途中模式」開關 */}

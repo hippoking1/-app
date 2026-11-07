@@ -608,20 +608,43 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </span>
           )}
         </div>
-        <div style={{ position: 'relative', marginTop: '4px' }}>
-          <span
+        {/* 結構化金額輸入框 (膠囊前綴，杜絕任何文字遮蔽重疊) */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            marginTop: '6px',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1.5px solid var(--border)',
+            borderRadius: 'var(--radius-md)',
+            padding: '4px 12px 4px 8px',
+            gap: '10px'
+          }}
+        >
+          <div
             style={{
-              position: 'absolute',
-              left: '12px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              fontSize: activeCurrencyInfo.symbol.length > 2 ? '15px' : '20px',
-              fontWeight: 800,
-              color: type === 'expense' ? 'var(--expense)' : type === 'income' ? 'var(--income)' : 'var(--info)'
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-focus)',
+              flexShrink: 0
             }}
           >
-            {activeCurrencyInfo.symbol}
-          </span>
+            <span style={{ fontSize: '16px', lineHeight: 1 }}>{activeCurrencyInfo.flag}</span>
+            <span
+              style={{
+                fontSize: '13px',
+                fontWeight: 800,
+                color: type === 'expense' ? 'var(--expense)' : type === 'income' ? 'var(--income)' : 'var(--info)'
+              }}
+            >
+              {activeCurrencyInfo.symbol} ({activeCurrencyInfo.code})
+            </span>
+          </div>
+
           <input
             type="number"
             inputMode="decimal"
@@ -633,15 +656,14 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             autoFocus
             style={{
               width: '100%',
-              padding: activeCurrencyInfo.symbol.length > 2 ? '12px 14px 12px 48px' : '12px 14px 12px 36px',
-              backgroundColor: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-md)',
+              backgroundColor: 'transparent',
+              border: 'none',
+              outline: 'none',
               color: 'var(--text-primary)',
               fontSize: '24px',
               fontWeight: 800,
-              outline: 'none',
-              fontFamily: 'var(--font-mono)'
+              fontFamily: 'var(--font-mono)',
+              padding: '6px 0'
             }}
           />
         </div>

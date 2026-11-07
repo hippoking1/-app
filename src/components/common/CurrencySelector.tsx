@@ -6,12 +6,13 @@ import {
   addPinnedCurrency,
   removePinnedCurrency,
   setUserPinnedCurrencies,
-  DEFAULT_PINNED_CURRENCIES
+  DEFAULT_PINNED_CURRENCIES,
+  formatExchangeRate
 } from '@/services/exchangeRate';
 import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Plus, X, Search, Check, Settings2, RotateCcw } from 'lucide-react';
+import { Plus, X, Search, Check, Settings2, RotateCcw, Globe } from 'lucide-react';
 import { hapticLight } from '@/utils/haptics';
 
 interface CurrencySelectorProps {
@@ -19,13 +20,15 @@ interface CurrencySelectorProps {
   onSelectCurrency: (code: string) => void;
   includeTWD?: boolean;
   label?: string;
+  showManageTrigger?: boolean;
 }
 
 export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
   selectedCurrency,
   onSelectCurrency,
   includeTWD = false,
-  label
+  label,
+  showManageTrigger = true
 }) => {
   const [pinnedCurrencies, setPinnedCurrencies] = useState<string[]>(() =>
     getUserPinnedCurrencies(includeTWD)
@@ -34,7 +37,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
   const [searchKw, setSearchKw] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // 確保選中的幣別如果在 pinnedCurrencies 以外，也臨時展示在按鈕列中
+  // 確保選中的幣別若在 pinned 以外，也能暫時展示在清單中
   const displayCurrencies = useMemo(() => {
     const list = [...pinnedCurrencies];
     if (includeTWD && !list.includes('TWD')) {
@@ -80,7 +83,7 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
     }
   };
 
-  // 過濾搜尋所有支援的貨幣
+  // 過濾搜尋全球所有支援的貨幣
   const filteredAllCurrencies = useMemo(() => {
     const kw = searchKw.trim().toLowerCase();
     return SUPPORTED_CURRENCIES.filter((c) => {
@@ -95,35 +98,44 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
   }, [searchKw, includeTWD]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       {label && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>
             {label}
           </span>
-          <button
-            type="button"
-            onClick={() => setIsEditMode(!isEditMode)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: isEditMode ? 'var(--primary-light)' : 'var(--text-muted)',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px'
-            }}
-          >
-            <Settings2 size={12} />
-            <span>{isEditMode ? '完成管理' : '增刪管理'}</span>
-          </button>
+          {showManageTrigger && (
+            <button
+              type="button"
+              onClick={() => setIsEditMode(!isEditMode)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isEditMode ? 'var(--primary-light)' : 'var(--text-muted)',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}
+            >
+              <Settings2 size={12} />
+              <span>{isEditMode ? '完成管理' : '增刪自訂'}</span>
+            </button>
+          )}
         </div>
       )}
 
-      {/* 快捷幣別按鈕列 */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+      {/* 快捷幣別按鈕列（支援平滑換行與高對比標籤） */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '6px',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}
+      >
         {displayCurrencies.map((code) => {
           const isSelected = selectedCurrency === code;
           const info = getCurrencyInfo(code);
@@ -145,22 +157,23 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                   onSelectCurrency(code);
                 }}
                 style={{
-                  padding: isEditMode && !isTwd ? '4px 22px 4px 8px' : '4px 10px',
+                  padding: isEditMode && !isTwd ? '5px 24px 5px 10px' : '5px 12px',
                   borderRadius: 'var(--radius-full)',
-                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
-                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.2)' : 'var(--bg-tertiary)',
+                  border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
+                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'var(--bg-tertiary)',
                   color: isSelected ? 'var(--primary-light)' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: isSelected ? 700 : 500,
+                  fontSize: '12px',
+                  fontWeight: isSelected ? 800 : 600,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '5px',
                   cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  userSelect: 'none'
+                  transition: 'all 0.15s ease',
+                  userSelect: 'none',
+                  boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.25)' : 'none'
                 }}
               >
-                <span>{info.flag}</span>
+                <span style={{ fontSize: '14px', lineHeight: 1 }}>{info.flag}</span>
                 <span>{info.code}</span>
               </button>
 
@@ -173,13 +186,13 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                   title={`移除 ${code}`}
                   style={{
                     position: 'absolute',
-                    right: '3px',
+                    right: '4px',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     width: '16px',
                     height: '16px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.25)',
                     color: 'var(--expense)',
                     border: 'none',
                     display: 'flex',
@@ -204,33 +217,33 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             setSearchKw('');
             setIsManageModalOpen(true);
           }}
-          title="新增更多國家貨幣..."
+          title="搜尋並新增全球貨幣..."
           style={{
-            padding: '4px 9px',
+            padding: '5px 12px',
             borderRadius: 'var(--radius-full)',
             backgroundColor: 'var(--bg-tertiary)',
             border: '1px dashed var(--border-focus)',
             color: 'var(--primary-light)',
-            fontSize: '11px',
+            fontSize: '12px',
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
-            gap: '3px',
+            gap: '4px',
             cursor: 'pointer',
             transition: 'all 0.15s'
           }}
         >
-          <Plus size={13} />
+          <Plus size={13} strokeWidth={2.5} />
           <span>新增貨幣</span>
         </button>
 
-        {!label && (
+        {showManageTrigger && !label && (
           <button
             type="button"
             onClick={() => setIsEditMode(!isEditMode)}
             title={isEditMode ? '完成編輯' : '增刪自訂貨幣'}
             style={{
-              padding: '4px 6px',
+              padding: '5px 8px',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'transparent',
               border: 'none',
@@ -240,30 +253,45 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               alignItems: 'center'
             }}
           >
-            <Settings2 size={13} />
+            <Settings2 size={14} />
           </button>
         )}
       </div>
 
-      {/* 自由增刪各國貨幣 Modal */}
+      {/* 自由增刪各國貨幣全域彈窗 Modal (使用 Portal 掛載於 document.body，永不截斷) */}
       <Modal
         isOpen={isManageModalOpen}
         onClose={() => setIsManageModalOpen(false)}
-        title="🌐 自由新增各國貨幣"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Globe size={18} color="var(--primary)" />
+            <span>選擇或新增各國貨幣</span>
+          </div>
+        }
+        maxWidth="560px"
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* 搜尋框 */}
           <Input
-            placeholder="搜尋國家名稱、幣別代碼 (例如：泰國、THB、歐元、CHF)..."
+            placeholder="搜尋國家名稱、幣別代碼（例如：泰國、日圓、CHF、歐元）..."
             value={searchKw}
             onChange={(e) => setSearchKw(e.target.value)}
             icon={<Search size={16} />}
             autoFocus
           />
 
-          {/* 目前已加入提示與重設按鈕 */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
-            <span>已加入常用：{displayCurrencies.join('、')}</span>
+          {/* 目前常用提示與重設按鈕 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+              padding: '0 2px'
+            }}
+          >
+            <span>常用貨幣：{pinnedCurrencies.join(' · ')}</span>
             <button
               type="button"
               onClick={handleResetDefaults}
@@ -274,24 +302,26 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '2px',
-                fontSize: '11px'
+                gap: '3px',
+                fontSize: '11px',
+                fontWeight: 600
               }}
             >
               <RotateCcw size={11} />
-              <span>恢復預設</span>
+              <span>重設回預設</span>
             </button>
           </div>
 
-          {/* 全球貨幣列表 */}
+          {/* 全球貨幣格狀列表 */}
           <div
             style={{
-              maxHeight: '340px',
+              maxHeight: '380px',
               overflowY: 'auto',
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-              gap: '8px',
-              paddingRight: '2px'
+              gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+              gap: '10px',
+              paddingRight: '4px',
+              paddingBottom: '4px'
             }}
           >
             {filteredAllCurrencies.map((c) => {
@@ -310,15 +340,15 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                     }
                   }}
                   style={{
-                    padding: '8px 10px',
-                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 12px',
+                    borderRadius: 'var(--radius-lg)',
                     backgroundColor: isSelected
-                      ? 'rgba(99, 102, 241, 0.15)'
+                      ? 'rgba(99, 102, 241, 0.18)'
                       : isPinned
                       ? 'var(--bg-tertiary)'
                       : 'var(--bg-secondary)',
                     border: isSelected
-                      ? '1px solid var(--primary)'
+                      ? '1.5px solid var(--primary)'
                       : isPinned
                       ? '1px solid var(--border-focus)'
                       : '1px solid var(--border)',
@@ -326,38 +356,84 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    transition: 'all 0.15s'
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.2)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '18px' }}>{c.flag}</span>
-                    <div>
-                      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <span style={{ fontSize: '20px', lineHeight: 1 }}>{c.flag}</span>
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          color: isSelected ? 'var(--primary-light)' : 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
                         {c.code}
                       </div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: 'var(--text-muted)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
                         {c.name}
                       </div>
+                      {c.code !== 'TWD' && (
+                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          ≈ {formatExchangeRate(c.defaultRateToTWD)} NT$
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {isPinned ? (
-                    <span style={{ color: 'var(--income)', fontSize: '11px', display: 'flex', alignItems: 'center' }}>
-                      <Check size={14} />
-                    </span>
-                  ) : (
-                    <span style={{ color: 'var(--primary-light)', fontSize: '11px', fontWeight: 600 }}>
-                      +加入
-                    </span>
-                  )}
+                  <div>
+                    {isPinned ? (
+                      <span
+                        style={{
+                          color: 'var(--income)',
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                          padding: '3px 6px',
+                          borderRadius: 'var(--radius-sm)',
+                          fontWeight: 700
+                        }}
+                      >
+                        <Check size={12} style={{ marginRight: '2px' }} />
+                        已加
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          color: 'var(--primary-light)',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                          padding: '3px 6px',
+                          borderRadius: 'var(--radius-sm)'
+                        }}
+                      >
+                        +加入
+                      </span>
+                    )}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
             <Button variant="secondary" size="sm" onClick={() => setIsManageModalOpen(false)}>
-              關閉
+              關閉視窗
             </Button>
           </div>
         </div>

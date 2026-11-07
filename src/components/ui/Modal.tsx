@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 interface ModalProps {
@@ -39,7 +40,7 @@ export const Modal: React.FC<ModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       style={{
         position: 'fixed',
@@ -53,7 +54,7 @@ export const Modal: React.FC<ModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 99999, // 確保高於所有側邊欄、header 與浮動卡片
         padding: 'var(--space-4)'
       }}
       onMouseDown={(e) => {
@@ -77,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-glass)',
           borderRadius: 'var(--radius-xl)',
-          boxShadow: 'var(--shadow-lg)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -90,7 +91,8 @@ export const Modal: React.FC<ModalProps> = ({
             borderBottom: '1px solid var(--border)',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexShrink: 0
           }}
         >
           <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>
@@ -99,6 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            aria-label="關閉視窗"
             style={{
               background: 'transparent',
               border: 'none',
@@ -131,4 +134,6 @@ export const Modal: React.FC<ModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
