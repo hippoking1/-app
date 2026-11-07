@@ -21,6 +21,7 @@ import {
   formatExchangeRate
 } from '@/services/exchangeRate';
 import { formatCurrency } from '@/utils/analytics';
+import { CurrencySelector } from '@/components/common/CurrencySelector';
 import { v4 as uuidv4 } from 'uuid';
 import { format } from 'date-fns';
 import {
@@ -399,31 +400,11 @@ export const Travel: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px', alignItems: 'center' }}>
           {/* 左側：外幣選擇與輸入 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {['JPY', 'KRW', 'USD', 'EUR', 'THB', 'HKD'].map((code) => {
-                const isSelected = calcCurrency === code;
-                const info = getCurrencyInfo(code);
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => handleCalcCurrencyChange(code)}
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: 'var(--radius-full)',
-                      border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      backgroundColor: isSelected ? 'var(--primary)' : 'var(--bg-secondary)',
-                      color: isSelected ? '#ffffff' : 'var(--text-secondary)',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {info.flag} {code}
-                  </button>
-                );
-              })}
-            </div>
+            <CurrencySelector
+              selectedCurrency={calcCurrency}
+              onSelectCurrency={handleCalcCurrencyChange}
+              includeTWD={false}
+            />
 
             <div style={{ position: 'relative' }}>
               <span

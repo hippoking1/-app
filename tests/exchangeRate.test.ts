@@ -4,7 +4,12 @@ import {
   getCurrencyInfo,
   formatForeignCurrency,
   formatExchangeRate,
-  SUPPORTED_CURRENCIES
+  SUPPORTED_CURRENCIES,
+  getUserPinnedCurrencies,
+  setUserPinnedCurrencies,
+  addPinnedCurrency,
+  removePinnedCurrency,
+  DEFAULT_PINNED_CURRENCIES
 } from '../src/services/exchangeRate';
 
 describe('多幣別即時匯率與旅行貨幣轉換測試', () => {
@@ -74,5 +79,21 @@ describe('多幣別即時匯率與旅行貨幣轉換測試', () => {
     expect(formatExchangeRate(0.2145)).toBe('0.2145');
     expect(formatExchangeRate(32.5)).toBe('32.50');
     expect(formatExchangeRate(120.5)).toBe('120.5');
+  });
+
+  it('使用者自由增刪釘選貨幣測試', () => {
+    setUserPinnedCurrencies(DEFAULT_PINNED_CURRENCIES);
+    const defaults = getUserPinnedCurrencies(false);
+    expect(defaults).toEqual(DEFAULT_PINNED_CURRENCIES);
+
+    // 新增 CHF (瑞士法郎)
+    const afterAdd = addPinnedCurrency('CHF');
+    expect(afterAdd).toContain('CHF');
+    expect(getUserPinnedCurrencies(false)).toContain('CHF');
+
+    // 移除 HKD
+    const afterRemove = removePinnedCurrency('HKD');
+    expect(afterRemove).not.toContain('HKD');
+    expect(getUserPinnedCurrencies(false)).not.toContain('HKD');
   });
 });

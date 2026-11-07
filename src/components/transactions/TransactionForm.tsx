@@ -18,6 +18,7 @@ import {
   fetchLiveExchangeRates,
   formatExchangeRate
 } from '@/services/exchangeRate';
+import { CurrencySelector } from '@/components/common/CurrencySelector';
 import { v4 as uuidv4 } from 'uuid';
 import { format, addMonths, parseISO } from 'date-fns';
 import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock, Plane, RefreshCw, Globe, ArrowRight } from 'lucide-react';
@@ -578,63 +579,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           )}
         </div>
 
-        {/* 常用貨幣快捷標籤 */}
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].map((code) => {
-            const isSelected = currency === code;
-            const info = getCurrencyInfo(code);
-            return (
-              <button
-                key={code}
-                type="button"
-                onClick={() => handleCurrencyChange(code)}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: 'var(--radius-full)',
-                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
-                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'var(--bg-tertiary)',
-                  color: isSelected ? 'var(--primary-light)' : 'var(--text-secondary)',
-                  fontSize: '11px',
-                  fontWeight: isSelected ? 700 : 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s'
-                }}
-              >
-                <span>{info.flag}</span>
-                <span>{info.code}</span>
-              </button>
-            );
-          })}
-
-          {/* 更多幣別下拉 */}
-          <select
-            value={['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].includes(currency) ? '' : currency}
-            onChange={(e) => {
-              if (e.target.value) handleCurrencyChange(e.target.value);
-            }}
-            style={{
-              padding: '3px 8px',
-              borderRadius: 'var(--radius-full)',
-              backgroundColor: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 500,
-              outline: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="">更多外幣...</option>
-            {SUPPORTED_CURRENCIES.filter((c) => !['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].includes(c.code)).map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.flag} {c.code} ({c.name})
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* 自由增刪各國貨幣選擇器 */}
+        <CurrencySelector
+          selectedCurrency={currency}
+          onSelectCurrency={handleCurrencyChange}
+          includeTWD={true}
+        />
       </div>
 
       {/* 金額輸入 */}
