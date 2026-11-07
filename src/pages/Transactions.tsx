@@ -22,7 +22,7 @@ export const Transactions: React.FC = () => {
   const { subscriptions } = useSubscriptions();
 
   const [keyword, setKeyword] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | TransactionType | 'subscription'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | TransactionType | 'subscription' | 'travel'>('all');
   const [selectedAccountId, setSelectedAccountId] = useState('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState('all');
   const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
@@ -50,6 +50,8 @@ export const Transactions: React.FC = () => {
   const filtered = baseTransactions.filter((t) => {
     if (typeFilter === 'subscription') {
       if (!t.subscription && !t.tags?.includes('訂閱付款')) return false;
+    } else if (typeFilter === 'travel') {
+      if (!t.tripId && (!t.originalCurrency || t.originalCurrency === 'TWD') && t.source !== 'travel') return false;
     } else if (typeFilter !== 'all' && t.type !== typeFilter) {
       return false;
     }
@@ -60,7 +62,8 @@ export const Transactions: React.FC = () => {
       const matchMerchant = t.merchant?.toLowerCase().includes(kw);
       const matchNote = t.note?.toLowerCase().includes(kw);
       const matchTag = t.tags?.some((tag) => tag.toLowerCase().includes(kw));
-      if (!matchMerchant && !matchNote && !matchTag) return false;
+      const matchCurrency = t.originalCurrency?.toLowerCase().includes(kw);
+      if (!matchMerchant && !matchNote && !matchTag && !matchCurrency) return false;
     }
     return true;
   });
@@ -175,6 +178,7 @@ export const Transactions: React.FC = () => {
               { value: 'expense', label: '僅支出' },
               { value: 'income', label: '僅收入' },
               { value: 'transfer', label: '僅轉帳' },
+              { value: 'travel', label: '✈️ 僅外幣/旅行' },
               { value: 'subscription', label: '🔁 僅訂閱扣款' }
             ]}
           />

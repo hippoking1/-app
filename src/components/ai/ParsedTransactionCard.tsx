@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ParsedTransaction, Account, Category, Transaction } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { formatCurrency } from '@/utils/analytics';
-import { Check, Trash2, Tag, Calendar, Wallet } from 'lucide-react';
+import { getCurrencyInfo, getExchangeRateForCurrency, convertForeignToTWD, formatExchangeRate } from '@/services/exchangeRate';
+import { Check, Trash2, Tag, Calendar, Wallet, Globe, ArrowRight } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ParsedTransactionCardProps {
@@ -25,16 +26,35 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
   const matchedCat = categories.find((c) => c.name.includes(transaction.categoryName)) || categories[0];
   const matchedAcc = accounts.find((a) => a.name.includes(transaction.accountName || '')) || accounts[0];
 
+  const initialCurrency = transaction.originalCurrency || 'TWD';
+  const isForeign = initialCurrency !== 'TWD';
+
   const [type, setType] = useState(transaction.type || 'expense');
-  const [amount, setAmount] = useState(String(transaction.amount));
+  const [currency, setCurrency] = useState(initialCurrency);
+  const [amount, setAmount] = useState(() => {
+    if (transaction.originalAmount) return String(transaction.originalAmount);
+    return String(transaction.amount);
+  });
+  const [rate, setRate] = useState<number>(() => {
+    return transaction.exchangeRate || getExchangeRateForCurrency(initialCurrency);
+  });
   const [categoryId, setCategoryId] = useState(matchedCat?.id || '');
   const [accountId, setAccountId] = useState(matchedAcc?.id || '');
   const [date, setDate] = useState(transaction.date);
   const [note, setNote] = useState(transaction.note);
 
+  const currencyInfo = useMemo(() => getCurrencyInfo(currency), [currency]);
+  const parsedRawAmount = parseFloat(amount) || 0;
+
+  const twdConversion = useMemo(() => {
+    if (currency === 'TWD') {
+      return { baseTWD: parsedRawAmount, feeTWD: 0, totalTWD: parsedRawAmount };
+    }
+    return convertForeignToTWD(parsedRawAmount, rate, 0);
+  }, [currency, parsedRawAmount, rate]);
+
   const handleConfirm = () => {
-    const parsedAmount = parseFloat(amount) || 0;
-    if (parsedAmount <= 0) return;
+    if (parsedRawAmount <= 0) return;
 
     const now = new Date().toISOString();
     const finalTx: Transaction = {
@@ -43,12 +63,16 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
       accountId,
       categoryId,
       type,
-      amount: parsedAmount,
+      amount: twdConversion.totalTWD,
       merchant: transaction.merchant,
       note,
       tags: transaction.tags || ['AI智能記帳'],
       date,
       aiGenerated: note,
+      source: currency !== 'TWD' ? 'travel' : 'ai',
+      originalCurrency: currency !== 'TWD' ? currency : undefined,
+      originalAmount: currency !== 'TWD' ? parsedRawAmount : undefined,
+      exchangeRate: currency !== 'TWD' ? rate : undefined,
       createdAt: now,
       updatedAt: now
     };
@@ -90,8 +114,8 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '15px', fontWeight: 800, color: type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
-            $
+          <span style={{ fontSize: '13px', fontWeight: 800, color: type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
+            {currencyInfo.symbol}
           </span>
           <input
             type="number"
@@ -112,6 +136,30 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
           />
         </div>
       </div>
+
+      {/* 外幣換算提示 */}
+      {currency !== 'TWD' && parsedRawAmount > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            backgroundColor: 'var(--bg-tertiary)',
+            padding: '4px 8px',
+            borderRadius: 'var(--radius-sm)'
+          }}
+        >
+          <span>{currencyInfo.flag} {currency} (匯率 {formatExchangeRate(rate)})</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span>折合</span>
+            <strong style={{ color: 'var(--primary-light)', fontWeight: 700 }}>
+              NT$ {twdConversion.totalTWD.toLocaleString()}
+            </strong>
+          </div>
+        </div>
+      )}
 
       {/* 中間：分類與帳戶選擇下拉 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>

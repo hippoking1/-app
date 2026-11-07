@@ -123,8 +123,15 @@ export interface Transaction {
   aiGenerated?: string; // AI 產生的原始提示詞
   installment?: InstallmentInfo; // 信用卡分期資訊
   subscription?: SubscriptionInfo; // 信用卡訂閱付款資訊
-  source?: 'manual' | 'ai' | 'stock' | 'subscription' | 'installment'; // 交易來源
+  source?: 'manual' | 'ai' | 'stock' | 'subscription' | 'installment' | 'travel'; // 交易來源
   excludeFromBudget?: boolean; // 是否排除於生活預算計算
+  // 旅行記帳與外幣擴充欄位
+  originalCurrency?: string; // 原始消費幣別代碼 (例如 JPY, USD, 預設 TWD)
+  originalAmount?: number; // 原始外幣金額 (例如 5000)
+  exchangeRate?: number; // 記帳當下匯率 (1 外幣 = X 台幣，例如 0.2145)
+  foreignFeeRate?: number; // 海外刷卡手續費率 % (例如 1.5)
+  foreignFeeTWD?: number; // 海外刷卡手續費台幣金額
+  tripId?: string; // 關聯的旅行專案 ID
   createdAt: string;
   updatedAt: string;
 }
@@ -236,6 +243,38 @@ export interface StockSearchResult {
 }
 
 /**
+ * 旅行專案介面
+ */
+export interface TravelTrip {
+  id: string;
+  userId: string;
+  name: string; // 旅程名稱，例如「2026 東京賞櫻行」
+  destination: string; // 目的地，例如「日本 東京」
+  currency: string; // 當地主要貨幣代碼，例如 'JPY'
+  customExchangeRate?: number; // 固定換匯匯率 (選填，未填則用即時匯率)
+  budgetTWD?: number; // 旅遊總預算 (台幣 NT$)
+  startDate: string; // YYYY-MM-DD
+  endDate: string; // YYYY-MM-DD
+  isActive: boolean; // 是否為「當前進行中旅程」(開啟後快速記帳預設套用)
+  excludeFromMonthlyBudget?: boolean; // 是否將此旅程花費排除於日常每月生活預算
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 貨幣資訊介面
+ */
+export interface CurrencyInfo {
+  code: string; // 幣別代碼，例如 'JPY'
+  name: string; // 中文名稱，例如 '日圓'
+  symbol: string; // 貨幣符號，例如 '¥'
+  flag: string; // 國旗 Emoji，例如 '🇯🇵'
+  decimals: number; // 建議顯示小數位數 (如 JPY 為 0, USD 為 2)
+  defaultRateToTWD: number; // 離線保底匯率 (1 外幣 = X 台幣)
+}
+
+/**
  * AI 解析出來的交易草稿結構
  */
 export interface ParsedTransaction {
@@ -248,6 +287,10 @@ export interface ParsedTransaction {
   date: string;
   tags?: string[];
   confidence?: number;
+  // 外幣支援
+  originalCurrency?: string;
+  originalAmount?: number;
+  exchangeRate?: number;
 }
 
 /**

@@ -15,10 +15,11 @@ import {
   LogOut,
   Moon,
   Sun,
-  X
+  X,
+  Plane
 } from 'lucide-react';
 import { useAppStore } from '@/stores/appStore';
-import { useTotalNetWorth } from '@/hooks/useFirestore';
+import { useTotalNetWorth, useTrips } from '@/hooks/useFirestore';
 import { formatCurrency } from '@/utils/analytics';
 import { logout } from '@/services/auth';
 import { CURRENT_VERSION } from '@/hooks/useVersionUpdater';
@@ -26,6 +27,7 @@ import { CURRENT_VERSION } from '@/hooks/useVersionUpdater';
 export const NAV_ITEMS = [
   { to: '/', label: '財務總覽', shortLabel: '總覽', icon: LayoutDashboard },
   { to: '/transactions', label: '收支明細', shortLabel: '明細', icon: ReceiptText },
+  { to: '/travel', label: '旅行記帳', shortLabel: '旅行', icon: Plane },
   { to: '/ai', label: 'AI 智能記帳', shortLabel: 'AI 記帳', icon: Sparkles, highlight: true },
   { to: '/stocks', label: '股票投資', shortLabel: '股票', icon: TrendingUp },
   { to: '/budget', label: '預算管理', shortLabel: '預算', icon: Target },
@@ -49,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
     setTransactionModalOpen
   } = useAppStore();
   const { totalNetWorth } = useTotalNetWorth();
+  const { activeTrip } = useTrips();
 
   const collapsed = isMobileDrawer ? false : isSidebarCollapsed;
 
@@ -230,6 +233,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isMobileDrawer = false, onClos
               >
                 <Icon size={18} color={item.highlight ? 'var(--purple)' : undefined} />
                 {!collapsed && <span>{item.label}</span>}
+                {item.to === '/travel' && activeTrip && (
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10b981',
+                      boxShadow: '0 0 6px #10b981',
+                      marginLeft: collapsed ? 0 : 'auto'
+                    }}
+                    title={`旅途中模式：${activeTrip.name}`}
+                  />
+                )}
               </NavLink>
             );
           })}

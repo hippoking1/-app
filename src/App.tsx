@@ -14,6 +14,7 @@ const Accounts = React.lazy(() => import('@/pages/Accounts').then((m) => ({ defa
 const BudgetPage = React.lazy(() => import('@/pages/Budget').then((m) => ({ default: m.BudgetPage })));
 const Analytics = React.lazy(() => import('@/pages/Analytics').then((m) => ({ default: m.Analytics })));
 const Stocks = React.lazy(() => import('@/pages/Stocks').then((m) => ({ default: m.Stocks })));
+const Travel = React.lazy(() => import('@/pages/Travel').then((m) => ({ default: m.Travel })));
 const AIBookkeeper = React.lazy(() => import('@/pages/AIBookkeeper').then((m) => ({ default: m.AIBookkeeper })));
 const Settings = React.lazy(() => import('@/pages/Settings').then((m) => ({ default: m.Settings })));
 
@@ -46,6 +47,7 @@ export const App: React.FC = () => {
               <Route path="/budget" element={<BudgetPage />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/stocks" element={<Stocks />} />
+              <Route path="/travel" element={<Travel />} />
               <Route path="/ai" element={<AIBookkeeper />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

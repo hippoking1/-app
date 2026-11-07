@@ -137,7 +137,7 @@ function handleParseExpense(payload) {
 今天的基準日期為：${today}。
 
 【解析規則】：
-1. 幣別固定為 TWD（新台幣）。金額必須為正整數數字。
+1. 幣別與金額：預設為 TWD（新台幣），金額必須為正整數數字。若使用者提及外幣（如「日幣/日圓/円/JPY」、「美金/美元/USD」、「韓元/韓幣/KRW」、「泰銖/THB」、「歐元/EUR」等），請同時輸出 originalCurrency（標準貨幣代碼）與 originalAmount（原幣金額），並以參考匯率（JPY≈0.215, USD≈32.5, KRW≈0.024, EUR≈35.2, THB≈0.95）折算為台幣整數填入 amount。
 2. 判斷交易類型 (type)："expense" (支出), "income" (收入), 或 "transfer" (轉帳)。
 3. 最佳匹配分類 (categoryName)：請盡量優先從可選分類列表選擇：[${categoryNames}]。
 4. 帳戶名稱 (accountName)：若提及支付方式（如刷卡、悠遊卡、現金、中信等），比對可用帳戶：[${accountNames}]。未提及預設為第一個或「現金錢包」。
@@ -152,6 +152,8 @@ function handleParseExpense(payload) {
   {
     "type": "expense" | "income" | "transfer",
     "amount": number,
+    "originalCurrency": string | undefined,
+    "originalAmount": number | undefined,
     "categoryName": string,
     "accountName": string,
     "note": string,

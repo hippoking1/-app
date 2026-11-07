@@ -1,9 +1,11 @@
 import React from 'react';
 import { Transaction, Category, Account } from '@/types';
-import { Trash2, ArrowRightLeft } from 'lucide-react';
+import { Trash2, ArrowRightLeft, Plane } from 'lucide-react';
 import { formatCurrency } from '@/utils/analytics';
 import { deleteTransaction, deleteInstallmentGroup, restoreTransaction } from '@/services/firestore';
 import { useAppStore } from '@/stores/appStore';
+import { useTrips } from '@/hooks/useFirestore';
+import { getCurrencyInfo, formatForeignCurrency, formatExchangeRate } from '@/services/exchangeRate';
 
 import { getSafeIcon } from '@/utils/iconHelper';
 import styles from './TransactionItem.module.css';
@@ -24,9 +26,15 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
   onEdit
 }) => {
   const { addToast } = useAppStore();
+  const { trips } = useTrips();
   const isExpense = transaction.type === 'expense';
   const isIncome = transaction.type === 'income';
   const isTransfer = transaction.type === 'transfer';
+
+  // 外幣與旅行關聯
+  const isForeign = Boolean(transaction.originalCurrency && transaction.originalCurrency !== 'TWD');
+  const currencyInfo = isForeign ? getCurrencyInfo(transaction.originalCurrency) : null;
+  const matchedTrip = transaction.tripId ? trips.find((t) => t.id === transaction.tripId) : null;
 
   const IconComponent = isTransfer
     ? ArrowRightLeft
@@ -110,6 +118,39 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
                 AI
               </span>
             )}
+            {matchedTrip && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: 'rgba(59, 130, 246, 0.15)',
+                  color: 'var(--primary-light)',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px'
+                }}
+                title={`歸屬旅程：${matchedTrip.name}`}
+              >
+                ✈️ {matchedTrip.name}
+              </span>
+            )}
+            {isForeign && currencyInfo && !matchedTrip && (
+              <span
+                style={{
+                  fontSize: '11px',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 600
+                }}
+              >
+                {currencyInfo.flag} {currencyInfo.code}
+              </span>
+            )}
             {transaction.installment && (
               <span
                 className={styles.badgeInstallment}
@@ -160,6 +201,20 @@ export const TransactionItem: React.FC<TransactionItemProps> = ({
             {isExpense ? '-' : isIncome ? '+' : ''}
             {formatCurrency(transaction.amount)}
           </div>
+          {isForeign && currencyInfo && transaction.originalAmount && (
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                fontFamily: 'var(--font-mono)',
+                marginTop: '1px'
+              }}
+              title={transaction.exchangeRate ? `匯率 1 ${currencyInfo.code} ≈ ${formatExchangeRate(transaction.exchangeRate)} NT$` : undefined}
+            >
+              {currencyInfo.symbol}
+              {transaction.originalAmount.toLocaleString()} {currencyInfo.code}
+            </div>
+          )}
         </div>
 
         <button

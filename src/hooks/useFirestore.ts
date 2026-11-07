@@ -9,7 +9,8 @@ import {
   Transaction,
   Budget,
   StockHolding,
-  Subscription
+  Subscription,
+  TravelTrip
 } from '@/types';
 
 /**
@@ -136,6 +137,20 @@ export function useSubscriptions() {
   const loading = useDataStore((state) => state.loading.subscriptions);
 
   return { subscriptions, loading };
+}
+
+/**
+ * 取得旅行專案清單與進行中旅程
+ */
+export function useTrips() {
+  const trips = useDataStore((state) => state.trips);
+  const loading = useDataStore((state) => state.loading.trips);
+
+  const activeTrip = useMemo(() => {
+    return trips.find((t) => t.isActive) || null;
+  }, [trips]);
+
+  return { trips, activeTrip, loading };
 }
 
 /**

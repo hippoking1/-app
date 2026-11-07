@@ -20,7 +20,8 @@ import {
   Budget,
   StockHolding,
   StockTransaction,
-  Subscription
+  Subscription,
+  TravelTrip
 } from '@/types';
 import { generateInitialSeedData } from './seedData';
 import { format } from 'date-fns';
@@ -487,3 +488,34 @@ export async function processDueSubscriptions(userId: string): Promise<Transacti
 
   return generatedTxs;
 }
+
+/* ==========================================================================
+   旅行專案 (Travel Trips) 服務
+   ========================================================================== */
+
+export async function saveTrip(trip: TravelTrip): Promise<void> {
+  const ref = doc(db, 'users', trip.userId, 'trips', trip.id);
+  await setDoc(ref, cleanUndefined(trip), { merge: true });
+}
+
+export async function deleteTrip(userId: string, tripId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', userId, 'trips', tripId));
+}
+
+export async function setActiveTrip(userId: string, activeTripId: string | null): Promise<void> {
+  const q = collection(db, 'users', userId, 'trips');
+  const snap = await getDocs(q);
+  if (snap.empty) return;
+
+  const batch = writeBatch(db);
+  const now = new Date().toISOString();
+  snap.docs.forEach((d) => {
+    const isTarget = d.id === activeTripId;
+    batch.update(d.ref, {
+      isActive: isTarget,
+      updatedAt: now
+    });
+  });
+  await batch.commit();
+}
+

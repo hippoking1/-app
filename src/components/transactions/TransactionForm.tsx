@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Transaction, TransactionType, Subscription, SubscriptionPeriod } from '@/types';
-import { useAccounts, useCategories, useTransactions } from '@/hooks/useFirestore';
+import { useAccounts, useCategories, useTransactions, useTrips } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { addTransaction, addInstallmentTransactions, saveSubscription } from '@/services/firestore';
 import { Button } from '@/components/ui/Button';
@@ -10,9 +10,17 @@ import { CategoryPicker } from './CategoryPicker';
 import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import { calculateNextBillingDate, POPULAR_SUBSCRIPTION_PRESETS, SubscriptionPreset } from '@/utils/subscriptionUtils';
+import {
+  SUPPORTED_CURRENCIES,
+  getCurrencyInfo,
+  getExchangeRateForCurrency,
+  convertForeignToTWD,
+  fetchLiveExchangeRates,
+  formatExchangeRate
+} from '@/services/exchangeRate';
 import { v4 as uuidv4 } from 'uuid';
 import { format, addMonths, parseISO } from 'date-fns';
-import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock } from 'lucide-react';
+import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock, Plane, RefreshCw, Globe, ArrowRight } from 'lucide-react';
 import { hapticSuccess } from '@/utils/haptics';
 
 interface TransactionFormProps {
@@ -30,11 +38,36 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const { accounts } = useAccounts();
   const { categories } = useCategories();
   const { transactions } = useTransactions();
+  const { trips, activeTrip } = useTrips();
+
+  // 貨幣與旅程狀態
+  const [currency, setCurrency] = useState<string>(() => {
+    return initialData?.originalCurrency || activeTrip?.currency || 'TWD';
+  });
+  const [tripId, setTripId] = useState<string>(() => {
+    return initialData?.tripId || activeTrip?.id || '';
+  });
+  const [exchangeRate, setExchangeRate] = useState<number>(() => {
+    if (initialData?.exchangeRate) return initialData.exchangeRate;
+    if (activeTrip?.customExchangeRate && activeTrip.currency === (initialData?.originalCurrency || activeTrip?.currency)) {
+      return activeTrip.customExchangeRate;
+    }
+    return getExchangeRateForCurrency(initialData?.originalCurrency || activeTrip?.currency || 'TWD');
+  });
+  const [isForeignFee, setIsForeignFee] = useState<boolean>(() => {
+    return initialData?.foreignFeeRate !== undefined ? initialData.foreignFeeRate > 0 : true;
+  });
+  const [customFeeRate, setCustomFeeRate] = useState<number>(() => {
+    return initialData?.foreignFeeRate ?? 1.5;
+  });
+  const [isCustomRate, setIsCustomRate] = useState<boolean>(false);
+  const [isUpdatingRates, setIsUpdatingRates] = useState<boolean>(false);
 
   const [type, setType] = useState<TransactionType>(() => {
     return initialData?.type || (sessionStorage.getItem('draft_tx_type') as TransactionType) || 'expense';
   });
   const [amount, setAmount] = useState<string>(() => {
+    if (initialData?.originalAmount) return String(initialData.originalAmount);
     return initialData?.amount ? String(initialData.amount) : sessionStorage.getItem('draft_tx_amount') || '';
   });
   const [merchant, setMerchant] = useState<string>(() => {
@@ -97,6 +130,59 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     return calculateNextBillingDate(date, subscriptionPeriod, billingCycleDay);
   }, [date, subscriptionPeriod, billingCycleDay]);
 
+  // 切換幣別處理
+  const handleCurrencyChange = (newCode: string) => {
+    setCurrency(newCode);
+    const upper = newCode.toUpperCase();
+    if (upper === 'TWD') {
+      setExchangeRate(1.0);
+      setIsCustomRate(false);
+      return;
+    }
+    const matchedTrip = trips.find((t) => t.id === tripId);
+    if (matchedTrip?.customExchangeRate && matchedTrip.currency === upper) {
+      setExchangeRate(matchedTrip.customExchangeRate);
+    } else {
+      setExchangeRate(getExchangeRateForCurrency(upper));
+    }
+  };
+
+  // 手動更新最新即時匯率
+  const handleRefreshLiveRate = async () => {
+    if (currency === 'TWD') return;
+    setIsUpdatingRates(true);
+    try {
+      const liveRates = await fetchLiveExchangeRates(true);
+      const rate = liveRates[currency] || getExchangeRateForCurrency(currency);
+      setExchangeRate(rate);
+      setIsCustomRate(false);
+      addToast({
+        type: 'success',
+        message: `已更新 ${currency} 即時匯率：1 ${currency} = ${formatExchangeRate(rate)} NT$`
+      });
+    } catch (err: any) {
+      addToast({ type: 'warning', message: '匯率更新失敗，已維持目前匯率' });
+    } finally {
+      setIsUpdatingRates(false);
+    }
+  };
+
+  // 外幣折合台幣試算
+  const parsedAmount = parseFloat(amount) || 0;
+  const isForeignCurrency = currency !== 'TWD';
+  const activeCurrencyInfo = useMemo(() => getCurrencyInfo(currency), [currency]);
+
+  const foreignConversion = useMemo(() => {
+    if (!isForeignCurrency) {
+      return { baseTWD: parsedAmount, feeTWD: 0, totalTWD: parsedAmount };
+    }
+    const feeRate = isCreditCard && isForeignFee ? customFeeRate : 0;
+    return convertForeignToTWD(parsedAmount, exchangeRate, feeRate);
+  }, [isForeignCurrency, parsedAmount, exchangeRate, isCreditCard, isForeignFee, customFeeRate]);
+
+  // 最終折合台幣金額 (用於帳戶餘額、信用卡帳單與總資產計算)
+  const effectiveTWDAmount = foreignConversion.totalTWD;
+
   // 套用熱門訂閱範本
   const handleApplySubscriptionPreset = (preset: SubscriptionPreset) => {
     setMerchant(preset.name);
@@ -115,11 +201,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     }
   };
 
-  // 分期試算數據
-  const parsedAmount = parseFloat(amount) || 0;
+  // 分期試算數據 (以外幣折算後之台幣 effectiveTWDAmount 進行分期拆算)
   const activePeriods = Math.max(2, Math.min(60, installmentPeriods));
-  const basePeriodAmount = Math.floor(parsedAmount / activePeriods);
-  const remainder = parsedAmount - basePeriodAmount * activePeriods;
+  const basePeriodAmount = Math.floor(effectiveTWDAmount / activePeriods);
+  const remainder = effectiveTWDAmount - basePeriodAmount * activePeriods;
   const firstPeriodAmount = basePeriodAmount + remainder;
   const endPeriodDate = useMemo(() => {
     try {
@@ -224,6 +309,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         .map((t) => t.trim())
         .filter(Boolean);
 
+      const matchedTrip = trips.find((t) => t.id === tripId);
+      if (matchedTrip) {
+        if (!tags.includes(matchedTrip.name)) {
+          tags.push(matchedTrip.name);
+        }
+      } else if (isForeignCurrency) {
+        if (!tags.includes('外幣記帳')) {
+          tags.push('外幣記帳');
+        }
+      }
+
+      const shouldExcludeFromBudget = Boolean(matchedTrip?.excludeFromMonthlyBudget);
+
       // 分期付款模式：自動依期數產生對應交易並批次寫入
       if (canUseInstallment && isInstallment) {
         if (!tags.includes('分期付款')) {
@@ -256,9 +354,17 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               groupId,
               currentPeriod: curPeriod,
               totalPeriods: activePeriods,
-              totalAmount: parsedAmount,
+              totalAmount: effectiveTWDAmount,
               periodAmount: curAmount
             },
+            // 外幣資訊
+            originalCurrency: isForeignCurrency ? currency : undefined,
+            originalAmount: isForeignCurrency && i === 0 ? parsedAmount : undefined,
+            exchangeRate: isForeignCurrency ? exchangeRate : undefined,
+            foreignFeeRate: isForeignCurrency && isForeignFee ? customFeeRate : undefined,
+            foreignFeeTWD: isForeignCurrency && isForeignFee && i === 0 ? foreignConversion.feeTWD : undefined,
+            tripId: tripId || undefined,
+            excludeFromBudget: shouldExcludeFromBudget,
             createdAt: now,
             updatedAt: now
           });
@@ -291,7 +397,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           name: subName,
           accountId,
           categoryId,
-          amount: parsedAmount,
+          amount: effectiveTWDAmount,
           period: subscriptionPeriod,
           billingCycleDay,
           startDate: initialDate,
@@ -314,7 +420,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             accountId,
             categoryId,
             type: 'expense',
-            amount: parsedAmount,
+            amount: effectiveTWDAmount,
             merchant: merchant.trim() || undefined,
             note: note.trim() ? `${note.trim()} (首期訂閱扣款)` : `${subName} (首期訂閱扣款)`,
             tags: subTags,
@@ -323,6 +429,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               subscriptionId: subId,
               period: subscriptionPeriod
             },
+            originalCurrency: isForeignCurrency ? currency : undefined,
+            originalAmount: isForeignCurrency ? parsedAmount : undefined,
+            exchangeRate: isForeignCurrency ? exchangeRate : undefined,
+            foreignFeeRate: isForeignCurrency && isForeignFee ? customFeeRate : undefined,
+            foreignFeeTWD: isForeignCurrency && isForeignFee ? foreignConversion.feeTWD : undefined,
+            tripId: tripId || undefined,
+            excludeFromBudget: shouldExcludeFromBudget,
             createdAt: now,
             updatedAt: now
           };
@@ -346,11 +459,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         accountId,
         categoryId: type === 'transfer' ? '' : categoryId,
         type,
-        amount: parsedAmount,
+        amount: effectiveTWDAmount,
         merchant: merchant.trim() || undefined,
         note: note.trim(),
         tags: tags.length > 0 ? tags : [],
         date,
+        originalCurrency: isForeignCurrency ? currency : undefined,
+        originalAmount: isForeignCurrency ? parsedAmount : undefined,
+        exchangeRate: isForeignCurrency ? exchangeRate : undefined,
+        foreignFeeRate: isForeignCurrency && isCreditCard && isForeignFee ? customFeeRate : undefined,
+        foreignFeeTWD: isForeignCurrency && isCreditCard && isForeignFee ? foreignConversion.feeTWD : undefined,
+        tripId: tripId || undefined,
+        excludeFromBudget: shouldExcludeFromBudget,
+        source: isForeignCurrency || tripId ? 'travel' : 'manual',
         createdAt: initialData?.createdAt || now,
         updatedAt: now
       };
@@ -362,7 +483,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       await addTransaction(transaction);
       hapticSuccess();
       clearDraft();
-      addToast({ type: 'success', message: '記帳已儲存！' });
+      addToast({
+        type: 'success',
+        message: isForeignCurrency
+          ? `外幣記帳已儲存！${activeCurrencyInfo.symbol}${parsedAmount.toLocaleString()} ➔ NT$ ${effectiveTWDAmount.toLocaleString()}`
+          : '記帳已儲存！'
+      });
       if (onSuccess) onSuccess();
     } catch (err: any) {
       addToast({ type: 'error', message: '儲存失敗: ' + err.message });
@@ -407,24 +533,128 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         })}
       </div>
 
+      {/* 貨幣與旅行專案選擇列 */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+            <Globe size={14} color="var(--primary)" />
+            <span>消費幣別</span>
+          </div>
+
+          {/* 歸屬旅程下拉選擇 (若有旅程專案) */}
+          {trips.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Plane size={13} color="var(--primary-light)" />
+              <select
+                value={tripId}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  setTripId(selectedId);
+                  const foundTrip = trips.find((t) => t.id === selectedId);
+                  if (foundTrip) {
+                    handleCurrencyChange(foundTrip.currency);
+                  }
+                }}
+                style={{
+                  padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="">無歸屬旅行專案</option>
+                {trips.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    ✈️ {t.name} ({t.currency})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* 常用貨幣快捷標籤 */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].map((code) => {
+            const isSelected = currency === code;
+            const info = getCurrencyInfo(code);
+            return (
+              <button
+                key={code}
+                type="button"
+                onClick={() => handleCurrencyChange(code)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: 'var(--radius-full)',
+                  border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
+                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'var(--bg-tertiary)',
+                  color: isSelected ? 'var(--primary-light)' : 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontWeight: isSelected ? 700 : 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s'
+                }}
+              >
+                <span>{info.flag}</span>
+                <span>{info.code}</span>
+              </button>
+            );
+          })}
+
+          {/* 更多幣別下拉 */}
+          <select
+            value={['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].includes(currency) ? '' : currency}
+            onChange={(e) => {
+              if (e.target.value) handleCurrencyChange(e.target.value);
+            }}
+            style={{
+              padding: '3px 8px',
+              borderRadius: 'var(--radius-full)',
+              backgroundColor: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 500,
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="">更多外幣...</option>
+            {SUPPORTED_CURRENCIES.filter((c) => !['TWD', 'JPY', 'KRW', 'USD', 'EUR', 'THB'].includes(c.code)).map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.flag} {c.code} ({c.name})
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* 金額輸入 */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
             {canUseInstallment && isInstallment
-              ? '分期總金額 (NT$)'
+              ? `分期總金額 (${activeCurrencyInfo.symbol} ${activeCurrencyInfo.code})`
               : canUseSubscription && isSubscription
-              ? `每期訂閱金額 (NT$ / ${subscriptionPeriod === 'yearly' ? '年' : subscriptionPeriod === 'weekly' ? '週' : '月'})`
-              : '金額 (NT$)'}
+              ? `每期訂閱金額 (${activeCurrencyInfo.symbol} ${activeCurrencyInfo.code} / ${subscriptionPeriod === 'yearly' ? '年' : subscriptionPeriod === 'weekly' ? '週' : '月'})`
+              : `金額 (${activeCurrencyInfo.symbol} ${activeCurrencyInfo.code})`}
           </label>
-          {canUseInstallment && isInstallment && parsedAmount > 0 && (
+          {canUseInstallment && isInstallment && effectiveTWDAmount > 0 && (
             <span style={{ fontSize: '12px', color: 'var(--expense)', fontWeight: 700 }}>
-              分 {activePeriods} 期 • 每期約 ${basePeriodAmount.toLocaleString()}
+              分 {activePeriods} 期 • 每期約 NT$ {basePeriodAmount.toLocaleString()}
             </span>
           )}
-          {canUseSubscription && isSubscription && parsedAmount > 0 && (
+          {canUseSubscription && isSubscription && effectiveTWDAmount > 0 && (
             <span style={{ fontSize: '12px', color: 'var(--purple)', fontWeight: 700 }}>
-              每期 ${parsedAmount.toLocaleString()} • 每月 {billingCycleDay} 號扣款
+              每期 NT$ {effectiveTWDAmount.toLocaleString()} • 每月 {billingCycleDay} 號扣款
             </span>
           )}
         </div>
@@ -432,15 +662,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <span
             style={{
               position: 'absolute',
-              left: '14px',
+              left: '12px',
               top: '50%',
               transform: 'translateY(-50%)',
-              fontSize: '22px',
+              fontSize: activeCurrencyInfo.symbol.length > 2 ? '15px' : '20px',
               fontWeight: 800,
               color: type === 'expense' ? 'var(--expense)' : type === 'income' ? 'var(--income)' : 'var(--info)'
             }}
           >
-            $
+            {activeCurrencyInfo.symbol}
           </span>
           <input
             type="number"
@@ -453,7 +683,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             autoFocus
             style={{
               width: '100%',
-              padding: '12px 14px 12px 36px',
+              padding: activeCurrencyInfo.symbol.length > 2 ? '12px 14px 12px 48px' : '12px 14px 12px 36px',
               backgroundColor: 'var(--bg-tertiary)',
               border: '1px solid var(--border)',
               borderRadius: 'var(--radius-md)',
@@ -465,6 +695,155 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             }}
           />
         </div>
+
+        {/* 外幣即時匯率換算與手續費計算卡片 */}
+        {isForeignCurrency && (
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '10px 12px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-focus)',
+              borderRadius: 'var(--radius-md)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              fontSize: '12px'
+            }}
+          >
+            {/* 匯率資訊列 */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                <span>即時參考匯率：</span>
+                {isCustomRate ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <input
+                      type="number"
+                      step="any"
+                      value={exchangeRate}
+                      onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 0)}
+                      style={{
+                        width: '75px',
+                        padding: '2px 4px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        color: 'var(--text-primary)',
+                        fontSize: '12px',
+                        fontWeight: 700
+                      }}
+                    />
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>TWD</span>
+                  </div>
+                ) : (
+                  <strong style={{ color: 'var(--text-primary)' }}>
+                    1 {currency} ≈ {formatExchangeRate(exchangeRate)} NT$
+                  </strong>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomRate(!isCustomRate)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--primary-light)',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  {isCustomRate ? '完成微調' : '手動微調匯率'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleRefreshLiveRate}
+                  disabled={isUpdatingRates}
+                  title="更新最新即時匯率"
+                  style={{
+                    background: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '3px 6px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px'
+                  }}
+                >
+                  <RefreshCw size={12} className={isUpdatingRates ? 'animate-spin' : ''} />
+                  <span>更新</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 信用卡海外交易手續費開關 (當帳戶為信用卡且為支出時) */}
+            {canUseInstallment && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '6px 8px',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px dashed var(--border)'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <CreditCard size={14} color="var(--purple)" />
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>海外刷卡手續費 (1.5%)</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {isForeignFee && foreignConversion.feeTWD > 0 && (
+                    <span style={{ fontSize: '11px', color: 'var(--expense)' }}>
+                      +NT$ {foreignConversion.feeTWD.toLocaleString()}
+                    </span>
+                  )}
+                  <input
+                    type="checkbox"
+                    checked={isForeignFee}
+                    onChange={(e) => setIsForeignFee(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 即時折合台幣結果總結 */}
+            {parsedAmount > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: '4px',
+                  borderTop: '1px solid var(--border)'
+                }}
+              >
+                <span style={{ color: 'var(--text-muted)' }}>
+                  原幣折合台幣：
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {activeCurrencyInfo.symbol}{parsedAmount.toLocaleString()}
+                  </span>
+                  <ArrowRight size={12} color="var(--text-muted)" />
+                  <strong style={{ fontSize: '15px', color: type === 'expense' ? 'var(--expense)' : 'var(--income)', fontWeight: 800 }}>
+                    NT$ {effectiveTWDAmount.toLocaleString()}
+                  </strong>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 地點或商家 (輸入時自動套用最常使用之消費模式) */}

@@ -12,7 +12,8 @@ import {
   Transaction,
   Budget,
   StockHolding,
-  Subscription
+  Subscription,
+  TravelTrip
 } from '@/types';
 import { computeBalances, computeTotalNetWorth } from '@/utils/balances';
 import { initializeUserData } from '@/services/firestore';
@@ -24,6 +25,7 @@ interface DataState {
   budgets: Budget[];
   holdings: StockHolding[];
   subscriptions: Subscription[];
+  trips: TravelTrip[];
   
   loading: {
     accounts: boolean;
@@ -32,6 +34,7 @@ interface DataState {
     budgets: boolean;
     holdings: boolean;
     subscriptions: boolean;
+    trips: boolean;
   };
 
   setAccounts: (accounts: Account[]) => void;
@@ -40,6 +43,7 @@ interface DataState {
   setBudgets: (budgets: Budget[]) => void;
   setHoldings: (holdings: StockHolding[]) => void;
   setSubscriptions: (subscriptions: Subscription[]) => void;
+  setTrips: (trips: TravelTrip[]) => void;
   setLoading: (key: keyof DataState['loading'], val: boolean) => void;
 }
 
@@ -50,6 +54,7 @@ export const useDataStore = create<DataState>((set) => ({
   budgets: [],
   holdings: [],
   subscriptions: [],
+  trips: [],
 
   loading: {
     accounts: true,
@@ -57,7 +62,8 @@ export const useDataStore = create<DataState>((set) => ({
     transactions: true,
     budgets: true,
     holdings: true,
-    subscriptions: true
+    subscriptions: true,
+    trips: true
   },
 
   setAccounts: (accounts) => set({ accounts, loading: { ...useDataStore.getState().loading, accounts: false } }),
@@ -66,6 +72,7 @@ export const useDataStore = create<DataState>((set) => ({
   setBudgets: (budgets) => set({ budgets, loading: { ...useDataStore.getState().loading, budgets: false } }),
   setHoldings: (holdings) => set({ holdings, loading: { ...useDataStore.getState().loading, holdings: false } }),
   setSubscriptions: (subscriptions) => set({ subscriptions, loading: { ...useDataStore.getState().loading, subscriptions: false } }),
+  setTrips: (trips) => set({ trips, loading: { ...useDataStore.getState().loading, trips: false } }),
   setLoading: (key, val) => set((state) => ({ loading: { ...state.loading, [key]: val } }))
 }));
 
@@ -106,7 +113,8 @@ export function startDataSync(userId: string): () => void {
     setTransactions,
     setBudgets,
     setHoldings,
-    setSubscriptions
+    setSubscriptions,
+    setTrips
   } = useDataStore.getState();
 
   // 1. Accounts
@@ -175,13 +183,25 @@ export function startDataSync(userId: string): () => void {
     (err) => console.warn('[DataStore] Subscriptions sync error:', err)
   );
 
+  // 7. Travel Trips
+  const qTrips = query(collection(db, 'users', userId, 'trips'), orderBy('startDate', 'desc'));
+  const unsubTrips = onSnapshot(
+    qTrips,
+    (snap) => {
+      const trips = snap.docs.map((d) => d.data() as TravelTrip);
+      setTrips(trips);
+    },
+    (err) => console.warn('[DataStore] Trips sync error:', err)
+  );
+
   currentUnsubscribers = [
     unsubAccounts,
     unsubCategories,
     unsubTransactions,
     unsubBudgets,
     unsubHoldings,
-    unsubSubscriptions
+    unsubSubscriptions,
+    unsubTrips
   ];
 
   return stopDataSync;

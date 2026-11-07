@@ -1,5 +1,6 @@
 import { ParsedTransaction, StockQuote, StockSearchResult, StockMarket } from '@/types';
 import { auth } from '@/lib/firebase';
+import { getExchangeRateForCurrency } from './exchangeRate';
 
 // 從環境變數讀取 Google Apps Script Web App 部署 URL
 export const GAS_URL = import.meta.env.VITE_GAS_DEPLOYMENT_URL || '';
@@ -219,8 +220,27 @@ function mockGASResponse<T>(action: string, payload: Record<string, any>): Promi
         const today = payload.userDate || new Date().toISOString().split('T')[0];
         
         const amountMatch = text.match(/\d+/);
-        const amount = amountMatch ? parseInt(amountMatch[0], 10) : 100;
+        const rawAmount = amountMatch ? parseInt(amountMatch[0], 10) : 100;
         
+        let originalCurrency: string | undefined;
+        const lower = text.toLowerCase();
+        if (text.includes('日圓') || text.includes('日幣') || text.includes('円') || lower.includes('jpy')) {
+          originalCurrency = 'JPY';
+        } else if (text.includes('美金') || text.includes('美元') || lower.includes('usd')) {
+          originalCurrency = 'USD';
+        } else if (text.includes('韓元') || text.includes('韓幣') || lower.includes('krw')) {
+          originalCurrency = 'KRW';
+        } else if (text.includes('泰銖') || lower.includes('thb')) {
+          originalCurrency = 'THB';
+        } else if (text.includes('歐元') || lower.includes('eur')) {
+          originalCurrency = 'EUR';
+        } else if (text.includes('港幣') || lower.includes('hkd')) {
+          originalCurrency = 'HKD';
+        }
+
+        const rate = originalCurrency ? getExchangeRateForCurrency(originalCurrency) : 1.0;
+        const finalTWD = originalCurrency ? Math.round(rawAmount * rate) : rawAmount;
+
         let catName = '餐飲美食';
         if (text.includes('車') || text.includes('油') || text.includes('捷運') || text.includes('悠遊卡')) catName = '交通運輸';
         else if (text.includes('買') || text.includes('全聯') || text.includes('家樂福') || text.includes('衣')) catName = '日常購物';
@@ -228,13 +248,16 @@ function mockGASResponse<T>(action: string, payload: Record<string, any>): Promi
 
         const mockItem: ParsedTransaction = {
           type: text.includes('薪') || text.includes('收入') ? 'income' : 'expense',
-          amount: amount,
+          amount: finalTWD,
+          originalCurrency,
+          originalAmount: originalCurrency ? rawAmount : undefined,
+          exchangeRate: originalCurrency ? rate : undefined,
           categoryName: catName,
           accountName: payload.accounts?.[0]?.name || '現金錢包',
-          note: text.replace(/\d+/g, '').replace(/(元|塊|花了|支出|買)/g, '').trim() || text,
+          note: text.replace(/\d+/g, '').replace(/(日圓|日幣|円|美元|美金|韓元|韓幣|泰銖|歐元|港幣|元|塊|花了|支出|買)/g, '').trim() || text,
           date: today,
-          tags: ['本機智慧模擬模式'],
-          confidence: 0.85
+          tags: originalCurrency ? ['AI智能記帳', '旅行外幣'] : ['本機智慧模擬模式'],
+          confidence: 0.88
         };
         resolve([mockItem] as unknown as T);
       } else if (action === 'getStockQuote') {
