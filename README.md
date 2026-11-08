@@ -1,15 +1,19 @@
 # 💰 智慧記帳與資產管理 Web App (Smart Expense Tracker)
 
-基於 **React 19 + TypeScript + Vite** 開發的現代化全功能個人財務與資產管理應用程式。整合 **Google Gemini 3.7 Flash AI** 自然語言記帳、**Yahoo Finance 全球/台股 (上市/上櫃/興櫃) 即時報價**、**Firebase 雲端資料庫** 及 **PWA 離線安裝支援**。
+基於 **React 19 + TypeScript + Vite** 開發的現代化全功能個人財務與資產管理應用程式。整合 **BYOK 多模型商 AI (Google Gemini / OpenAI / Anthropic Claude / Groq / DeepSeek / OpenRouter / xAI)** 自然語言記帳與財務健檢、**Yahoo Finance 全球/台股 (上市/上櫃/興櫃) 即時報價**、**Firebase 雲端資料庫** 及 **PWA 離線安裝支援**。
 
 ---
 
 ## 🌟 核心功能特色
 
-### 1. 🤖 Gemini 3.7 Flash AI 智慧記帳
-- **自然語言秒速解析**：支援隨意輸入（或語音轉文字）如 `今天午餐在麥當勞刷卡吃了 180 元`、`昨天搭計程車花了 250`、`領薪水 55000`。
+### 1. 🤖 自由選擇模型商與自備金鑰 (BYOK) AI 智慧記帳
+- **零預設金鑰架構 (BYOK, Bring Your Own Key)**：為徹底杜絕訪客惡意濫用與代墊鉅額 Token 費用之資安風險，系統**絕不預設任何系統 API Key**。
+- **自由模型選擇**：使用者輸入個人 API Key 驗證通過後，系統即時透過官方 API 動態拉取該模型商**旗下所有可用模型**（支援 Google Gemini、OpenAI GPT、Anthropic Claude、Groq LPU、DeepSeek、xAI Grok、OpenRouter 等），並支援關鍵字過濾或手動輸入自訂模型 ID。
+- **智能供應商自動識別**：輸入或貼上金鑰時自動識別供應商字首（`AIzaSy...`、`sk-...`、`sk-ant-...`、`gsk_...`、`xai-...`、`sk-or-...`）。
+- **自然語言秒速解析**：支援隨意輸入如 `今天午餐在麥當勞刷卡吃了 180 元`、`昨天搭計程車花了 250`、`全聯買菜580悠遊卡`、`領薪水 55000`。
 - **全自動結構化**：精確辨識金額、交易類型（支出/收入/轉帳）、最佳預算分類、扣款帳戶、日期推算及繁體中文標籤。
-- **AI 財務健康度洞察**：定期分析收支比例、超支類別並給予客製化省錢與理財優化建議。
+- **AI 財務健康度洞察**：以自選模型深度分析月度收支比例、超支類別並給予客製化省錢與理財優化建議。
+- **金鑰隔離與登出自動銷毀**：不同登入帳戶金鑰獨立隔離儲存，登出時自動清除快取，安全無虞。
 
 ### 2. 📈 股票資產與即時損益 (Yahoo Finance API)
 - **台股全覆蓋**：全面支援 **上市 (`.TW`)**、**上櫃 (`.TWO`)** 與 **興櫃市場 (`.TWO` 如 7829 全景軟體等)**。
@@ -75,8 +79,8 @@
 | **版本熱更新** | 自動 `version.json` 建置插件、智慧無感自動更新引擎 (`useVersionUpdater`) |
 | **單元測試** | Vitest（餘額運算、信用卡週期、生活支出過濾測試） |
 | **圖表與視覺** | Recharts、Lucide React (Curated Tree-shaking) |
-| **後端代理** | Google Apps Script (GAS) Web App + Firebase Auth ID Token |
-| **AI 模型** | Google Gemini 3.7 Flash API |
+| **後端代理** | Google Apps Script (GAS) Web App (專屬 Yahoo Finance 股市報價代理，無伺服器金鑰) |
+| **AI 模型** | BYOK 多模型商架構 (Google Gemini / OpenAI / Claude / Groq / DeepSeek / xAI / OpenRouter) |
 | **金融報價** | Yahoo Finance v8 API + 全球即時 Search API |
 | **資料庫 & 認證**| Firebase Authentication + Cloud Firestore |
 | **部署發布** | GitHub Pages、GitHub Actions (自動發布 `.exe` & `.apk`)、Firebase CLI |
@@ -255,8 +259,8 @@
 ## ⚡ 內建連線診斷工具
 
 登入系統後，隨時可進入 **「系統設定」 ➔ 點擊「⚡ 立即進行完整診斷」**：
-- 🟢 **GAS 伺服器 (doPost) 狀態**：即時測試網路延遲。
-- 🟢 **Gemini 3.7 Flash API 金鑰生效狀態**：發送測試文字給 LLM 並驗證真實結構化回傳。
+- 🟢 **GAS 股市報價代理伺服器 (doPost) 狀態**：即時測試網路延遲與連線。
+- 🟢 **個人 AI API 金鑰與自選模型生效狀態**：發送測試文字給您選定的 AI 模型並驗證結構化解析結果。
 - 🟢 **Yahoo Finance 台股 2880 (華南金) 與興櫃報價測試**：即時獲取最新市場價格。
 
 ---

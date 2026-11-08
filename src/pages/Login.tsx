@@ -79,7 +79,7 @@ export const Login: React.FC = () => {
             智慧記帳 <span className="text-gradient">AI & 理財</span>
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '6px' }}>
-            結合 Gemini 3.7 Flash 智能語意記帳與台美股投資追蹤
+            結合多模型 AI 智能語意記帳與台美股投資追蹤
           </p>
         </div>
 

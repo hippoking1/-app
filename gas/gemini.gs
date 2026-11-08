@@ -1,15 +1,16 @@
 /**
- * Gemini 3.7 Flash API 服務模組
+ * BYOK (使用者自備金鑰與自選模型) AI 服務模組
+ * 資安規範：伺服器不儲存亦不讀取任何預設 GEMINI_API_KEY，必須由使用者在前端傳入自己的 apiKey 與 model
  */
 
-/**
- * 處理自然語言記帳文字解析
- * @param {Object} payload { text: string, categories: Array<{id: string, name: string}>, accounts: Array<{id: string, name: string}>, userDate?: string }
- */
 function handleParseExpense(payload) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const apiKey = (payload.apiKey || '').trim();
+  const model = (payload.model || '').trim();
   if (!apiKey) {
-    return jsonResponse({ error: 'GAS 後端未設定 GEMINI_API_KEY，請至指令碼屬性設定' }, 500);
+    return jsonResponse({ error: '拒絕存取：系統不提供預設 API Key，請於前端輸入您個人的 API Key' }, 401);
+  }
+  if (!model) {
+    return jsonResponse({ error: '請指定要使用的 AI 模型名稱 (model)' }, 400);
   }
 
   const userText = payload.text || '';
@@ -52,7 +53,7 @@ function handleParseExpense(payload) {
   }
 ]`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const requestBody = {
     contents: [
@@ -82,7 +83,7 @@ function handleParseExpense(payload) {
   const responseText = response.getContentText();
 
   if (responseCode !== 200) {
-    return jsonResponse({ error: 'Gemini API 請求失敗 (' + responseCode + '): ' + responseText }, 502);
+    return jsonResponse({ error: 'AI API 請求失敗 (' + responseCode + '): ' + responseText }, 502);
   }
 
   const result = JSON.parse(responseText);
@@ -91,31 +92,31 @@ function handleParseExpense(payload) {
     const parsedTransactions = JSON.parse(rawContent);
     return jsonResponse(parsedTransactions);
   } catch (parseErr) {
-    return jsonResponse({ error: '解析 Gemini 輸出結構失敗: ' + parseErr.message, raw: responseText }, 500);
+    return jsonResponse({ error: '解析 AI 輸出結構失敗: ' + parseErr.message, raw: responseText }, 500);
   }
 }
 
-/**
- * 處理花費分析與智慧財務洞察
- * @param {Object} payload { monthlySummary: Object, topCategories: Array, budgetStatus: Object }
- */
 function handleSpendingInsights(payload) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const apiKey = (payload.apiKey || '').trim();
+  const model = (payload.model || '').trim();
   if (!apiKey) {
-    return jsonResponse({ error: 'GAS 後端未設定 GEMINI_API_KEY' }, 500);
+    return jsonResponse({ error: '拒絕存取：系統不提供預設 API Key，請於前端輸入您個人的 API Key' }, 401);
+  }
+  if (!model) {
+    return jsonResponse({ error: '請指定要使用的 AI 模型名稱 (model)' }, 400);
   }
 
   const prompt = `你是一位資深個人財務理財顧問。請根據以下使用者的財務數據摘要，提供 3 到 4 點精闢、實用且具建設性的繁體中文財務洞察與改善建議（包含亮點、潛在風險、超支警示與節省建議）：
 
 【財務數據摘要】：
-${JSON.stringify(payload, null, 2)}
+${JSON.stringify(payload.summaryData || payload, null, 2)}
 
 請以結構化、親切專業的語氣輸出，格式包含：
 1. 💡 本期財務健康度簡評
 2. ⚠️ 需關注的花費項目或超支風險
 3. 🎯 具體的省錢/資產配置建議`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const requestBody = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -133,7 +134,7 @@ ${JSON.stringify(payload, null, 2)}
 
   const result = JSON.parse(response.getContentText());
   if (response.getResponseCode() !== 200) {
-    return jsonResponse({ error: 'Gemini 洞察生成失敗' }, 502);
+    return jsonResponse({ error: 'AI 洞察生成失敗' }, 502);
   }
 
   const replyText = result.candidates[0].content.parts[0].text;

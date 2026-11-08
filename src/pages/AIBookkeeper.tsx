@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ChatBubble } from '@/components/ai/ChatBubble';
@@ -6,9 +7,10 @@ import { ParsedTransactionCard } from '@/components/ai/ParsedTransactionCard';
 import { useAccounts, useCategories } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
 import { parseExpenseTextWithGemini } from '@/services/gas';
+import { AI_PROVIDERS } from '@/services/ai';
 import { addTransaction } from '@/services/firestore';
 import { ParsedTransaction, Transaction } from '@/types';
-import { Sparkles, Send, Loader2, Zap, HelpCircle } from 'lucide-react';
+import { Sparkles, Send, Loader2, KeyRound, Cpu } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Message {
@@ -26,9 +28,14 @@ const QUICK_PROMPTS = [
 ];
 
 export const AIBookkeeper: React.FC = () => {
-  const { user, addToast } = useAppStore();
+  const navigate = useNavigate();
+  const { user, aiConfig, setAIConfig, addToast } = useAppStore();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+
+  const hasValidKey = Boolean(aiConfig.apiKey.trim() && aiConfig.isKeyValid && aiConfig.selectedModel);
+  const providerMeta = AI_PROVIDERS[aiConfig.provider] || AI_PROVIDERS.gemini;
+  const activeModelName = hasValidKey ? aiConfig.selectedModel : 'AI 智能記帳';
 
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +43,7 @@ export const AIBookkeeper: React.FC = () => {
     {
       id: 'welcome',
       role: 'assistant',
-      content: `👋 您好！我是您的 Gemini 3.7 Flash 記帳助手。\n\n您可以直接用自然語言告訴我花費，例如：\n• 「今天在全聯買菜 580 元，刷中信卡」\n• 「早餐 60、午餐 120、晚餐 200」\n• 「昨天搭捷運 45 元，悠遊卡付款」\n\n我會自動為您分類並整理成記帳清單！`
+      content: `👋 您好！我是您的 AI 記帳助手。\n\n您可以直接用自然語言告訴我花費，例如：\n• 「今天在全聯買菜 580 元，刷中信卡」\n• 「早餐 60、午餐 120、晚餐 200」\n• 「昨天搭捷運 45 元，悠遊卡付款」\n\n我會自動為您分類並整理成記帳清單！`
     }
   ]);
 
@@ -53,6 +60,15 @@ export const AIBookkeeper: React.FC = () => {
   const handleSend = async (textToSend?: string) => {
     const text = (textToSend || input).trim();
     if (!text || !user || loading) return;
+
+    if (!hasValidKey) {
+      addToast({
+        type: 'warning',
+        message: '請先至「系統設定」輸入您個人的 API Key 並選擇模型'
+      });
+      navigate('/settings');
+      return;
+    }
 
     const userMsgId = 'msg_' + Date.now();
     const newMessages: Message[] = [
@@ -78,7 +94,7 @@ export const AIBookkeeper: React.FC = () => {
         {
           id: aiMsgId,
           role: 'assistant',
-          content: `✅ 已成功為您解析出 ${parsedList.length} 筆交易！請核對以下明細並確認寫入：`,
+          content: `✅ 已透過 ${aiConfig.selectedModel} 為您解析出 ${parsedList.length} 筆交易！請核對以下明細並確認寫入：`,
           parsedTransactions: parsedList
         }
       ]);
@@ -134,17 +150,91 @@ export const AIBookkeeper: React.FC = () => {
 
   return (
     <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', minHeight: '520px', gap: 'var(--space-4)' }}>
-      {/* 頂部標題 */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* 頂部標題與模型快速切換器 */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles size={22} color="var(--purple)" /> Gemini 3.7 Flash 智能記帳
+            <Sparkles size={22} color="var(--purple)" /> {activeModelName} 智能記帳
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
             輸入日常白話文，自動完成分類、帳戶與日期比對
           </p>
         </div>
+
+        {/* 若已驗證 API Key，可直接於頂部自由切換該模型商提供的任何模型 */}
+        {hasValidKey && aiConfig.availableModels.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Cpu size={14} color="var(--purple)" />
+              {providerMeta.shortName}:
+            </span>
+            <select
+              value={aiConfig.selectedModel}
+              onChange={(e) => {
+                const next = e.target.value;
+                setAIConfig({ selectedModel: next });
+                addToast({ type: 'info', message: `🤖 已切換模型為：${next}` });
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--purple)',
+                color: 'var(--text-primary)',
+                fontSize: '12px',
+                fontWeight: 700,
+                maxWidth: '240px',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              {aiConfig.availableModels.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
+
+      {/* 尚未設定個人 API Key 時的提示橫幅 */}
+      {!hasValidKey && (
+        <Card
+          glass
+          padding="md"
+          style={{
+            border: '1px solid var(--warning)',
+            backgroundColor: 'rgba(245, 158, 11, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <KeyRound size={20} color="var(--warning)" style={{ flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                尚未設定個人 API Key（系統不提供預設金鑰）
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                請先至「系統設定」輸入您個人的 API Key 並自由選擇模型，即可啟用 AI 語意記帳與財務分析功能。
+              </div>
+            </div>
+          </div>
+
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => navigate('/settings')}
+            icon={<KeyRound size={15} />}
+          >
+            前往設定 API Key 與模型
+          </Button>
+        </Card>
+      )}
 
       {/* 聊天訊息捲動區 */}
       <Card
@@ -181,7 +271,7 @@ export const AIBookkeeper: React.FC = () => {
           <ChatBubble role="assistant">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
               <Loader2 size={16} className="animate-spin" />
-              <span>Gemini 正在理解語意並拆解帳目...</span>
+              <span>{aiConfig.selectedModel} 正在理解語意並拆解帳目...</span>
             </div>
           </ChatBubble>
         )}
@@ -195,6 +285,7 @@ export const AIBookkeeper: React.FC = () => {
           <button
             key={i}
             onClick={() => handleSend(p)}
+            disabled={!hasValidKey || loading}
             style={{
               padding: '4px 10px',
               fontSize: '11px',
@@ -204,7 +295,8 @@ export const AIBookkeeper: React.FC = () => {
               borderRadius: 'var(--radius-full)',
               color: 'var(--text-secondary)',
               whiteSpace: 'nowrap',
-              cursor: 'pointer'
+              cursor: hasValidKey ? 'pointer' : 'not-allowed',
+              opacity: hasValidKey ? 1 : 0.5
             }}
           >
             💬 {p}
@@ -224,8 +316,12 @@ export const AIBookkeeper: React.FC = () => {
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="例如：今天全聯買菜 580 元、悠遊卡儲值 500、星巴克 165..."
-          disabled={loading}
+          placeholder={
+            hasValidKey
+              ? '例如：今天全聯買菜 580 元、悠遊卡儲值 500、星巴克 165...'
+              : '請先至「系統設定」輸入您的 API Key 並選擇模型...'
+          }
+          disabled={loading || !hasValidKey}
           style={{
             flex: 1,
             backgroundColor: 'var(--bg-secondary)',
@@ -242,7 +338,7 @@ export const AIBookkeeper: React.FC = () => {
         <Button
           type="submit"
           variant="primary"
-          disabled={!input.trim() || loading}
+          disabled={!input.trim() || loading || !hasValidKey}
           icon={<Send size={18} />}
           style={{ borderRadius: 'var(--radius-lg)', padding: '0 20px' }}
         >

@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { AuthUser } from '@/services/auth';
+import {
+  AIConfigStorage,
+  EMPTY_AI_CONFIG,
+  loadUserAIConfig,
+  saveUserAIConfig,
+  clearUserAIConfig
+} from '@/services/ai';
 import { format } from 'date-fns';
 
 export interface ToastMessage {
@@ -20,6 +27,11 @@ interface AppState {
   isLoadingAuth: boolean;
   setUser: (user: AuthUser | null) => void;
   setIsLoadingAuth: (loading: boolean) => void;
+
+  // 使用者自備 AI API Key 與模型選擇狀態 (BYOK，系統無預設金鑰)
+  aiConfig: AIConfigStorage;
+  setAIConfig: (updates: Partial<AIConfigStorage>) => void;
+  clearAIConfig: () => void;
 
   // 主題 (預設 dark)
   theme: 'dark' | 'light';
@@ -59,9 +71,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       if (state.user?.uid === newUser?.uid && state.user?.email === newUser?.email) {
         return state; // 相同使用者不更新 state 引用，防止元件樹重新執行 useEffect
       }
-      return { user: newUser };
+      const nextAIConfig = newUser ? loadUserAIConfig(newUser.uid) : { ...EMPTY_AI_CONFIG };
+      return { user: newUser, aiConfig: nextAIConfig };
     }),
   setIsLoadingAuth: (isLoadingAuth) => set({ isLoadingAuth }),
+
+  aiConfig: loadUserAIConfig(),
+  setAIConfig: (updates) =>
+    set((state) => {
+      const merged: AIConfigStorage = {
+        ...state.aiConfig,
+        ...updates
+      };
+      saveUserAIConfig(merged, state.user?.uid);
+      return { aiConfig: merged };
+    }),
+  clearAIConfig: () =>
+    set((state) => {
+      clearUserAIConfig(state.user?.uid);
+      return { aiConfig: { ...EMPTY_AI_CONFIG, provider: state.aiConfig.provider } };
+    }),
 
   theme: (localStorage.getItem('smart_theme') as 'dark' | 'light') || 'dark',
   setTheme: (theme) => {

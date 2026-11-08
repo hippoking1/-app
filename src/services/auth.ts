@@ -237,6 +237,16 @@ export async function upgradeAnonymousWithGoogle(): Promise<AuthUser> {
  * 登出
  */
 export async function logout(): Promise<void> {
+  try {
+    const cached = localStorage.getItem('smart_auth_user_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed?.isAnonymous && parsed?.uid) {
+        localStorage.removeItem(`smart_expense_user_ai_config_v2_${parsed.uid}`);
+      }
+    }
+    localStorage.removeItem('smart_expense_user_ai_config_v2_session');
+  } catch {}
   localStorage.removeItem('smart_auth_user_cache');
   if (!isFirebaseConfigured) {
     localStorage.removeItem('smart_expense_demo_user');

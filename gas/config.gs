@@ -1,29 +1,20 @@
 /**
- * Google Apps Script 屬性設定工具
- * 第一次建立時，可在 Apps Script 編輯器中執行 setupProperties 函式進行初始化設定，
- * 或直接至【專案設定】->【指令碼屬性】手動新增 GEMINI_API_KEY 與 FINNHUB_API_KEY。
+ * Google Apps Script 屬性清理與檢查工具
+ * 資安規範：系統已全面改為 BYOK (使用者於前端自備 API Key)，請勿在 GAS 儲存預設的 GEMINI_API_KEY。
+ * 若您過去曾在 GAS 設定過 GEMINI_API_KEY，可執行下方 removeServerGeminiKey() 將其徹底移除。
  */
 
-function setupProperties() {
+function removeServerGeminiKey() {
   const props = PropertiesService.getScriptProperties();
-  
-  // 請在此處填入你的金鑰（執行後可刪除或直接在專案設定中管理）
-  props.setProperties({
-    'GEMINI_API_KEY': 'YOUR_GEMINI_API_KEY_HERE',
-    'FINNHUB_API_KEY': 'YOUR_FINNHUB_API_KEY_HERE'
-  });
-  
-  Logger.log('✅ 指令碼屬性設定完成！');
+  props.deleteProperty('GEMINI_API_KEY');
+  Logger.log('🔒 已成功從 GAS 伺服器移除 GEMINI_API_KEY！現在沒有任何訪客能消耗您的預設定額。');
 }
 
 /**
- * 測試檢視目前設定的屬性名稱 (安全隱藏金鑰內容)
+ * 測試檢視目前設定的屬性名稱
  */
 function checkProperties() {
   const props = PropertiesService.getScriptProperties().getProperties();
   const keys = Object.keys(props);
-  Logger.log('已設定的屬性列表: ' + keys.join(', '));
-  keys.forEach(function(k) {
-    Logger.log(k + ': ' + (props[k] ? '已設定 (長度 ' + props[k].length + ')' : '未設定'));
-  });
+  Logger.log('已設定的屬性列表: ' + (keys.length ? keys.join(', ') : '(無任何預設金鑰)'));
 }

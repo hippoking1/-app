@@ -1,7 +1,8 @@
 /**
  * ==========================================================================
- * 智慧記帳 App - Google Apps Script 全功能一體後端 (Code.gs)
- * 包含：Gemini 3.7 Flash AI 記帳 + Yahoo Finance 全球/台股上市上櫃興櫃即時行情
+ * 智慧記帳 App - Google Apps Script 後端 (Code.gs)
+ * 包含：Yahoo Finance 全球/台股上市上櫃興櫃即時行情 + 使用者自備金鑰 (BYOK) AI 代理
+ * 資安規範：伺服器端絕不預設或讀取任何 GEMINI_API_KEY，所有 AI 請求必須由使用者提供自己的 API Key 與模型名稱
  * ==========================================================================
  */
 
@@ -14,13 +15,11 @@ function doGet(e) {
   try {
     switch (action) {
       case 'healthCheck':
-        const geminiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
         return jsonResponse({
           status: 'ok',
-          message: 'Smart Expense Tracker GAS API 運作正常！',
-          hasGeminiKey: Boolean(geminiKey),
-          geminiModel: 'gemini-3.7-flash',
-          engine: 'Yahoo Finance v8 + Gemini 3.7 Flash',
+          message: 'Smart Expense Tracker GAS API 運作正常！(BYOK 安全模式：無預設系統 API Key)',
+          hasGeminiKey: false,
+          engine: 'Yahoo Finance v8 + BYOK Multi-Model AI',
           timestamp: new Date().toISOString()
         });
 
@@ -49,7 +48,7 @@ function doPost(e) {
     const payload = request.payload || {};
 
     switch (action) {
-      // 1. AI 記帳與花費分析 (Gemini 3.7 Flash)
+      // 1. AI 記帳與花費分析 (強制要求使用者自備 apiKey 與 model，絕不使用系統預設金鑰)
       case 'parseExpense':
         return handleParseExpense(payload);
 
@@ -102,23 +101,26 @@ function jsonResponse(data, statusCode) {
    ========================================================================== */
 
 function handleTestConnection(payload) {
-  const geminiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   return jsonResponse({
     status: 'connected',
     serverTime: new Date().toISOString(),
-    isGeminiConfigured: Boolean(geminiKey),
-    message: geminiKey ? 'GAS 後端連線成功，Gemini API 金鑰已設定！' : 'GAS 後端連線成功，但尚未在專案設定 GEMINI_API_KEY！'
+    isGeminiConfigured: false,
+    message: 'GAS 股市報價代理伺服器連線成功！(AI 採 BYOK 使用者自備金鑰機制，伺服器不提供預設金鑰)'
   });
 }
 
 /* ==========================================================================
-   二、Gemini 3.7 Flash AI 記帳與分析模組
+   二、BYOK (使用者自備金鑰與自選模型) AI 記帳與分析模組
    ========================================================================== */
 
 function handleParseExpense(payload) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const apiKey = (payload.apiKey || '').trim();
+  const model = (payload.model || '').trim();
   if (!apiKey) {
-    return jsonResponse({ error: 'GAS 未設定 GEMINI_API_KEY，請至 GAS「專案設定 > 指令碼屬性」新增 GEMINI_API_KEY' }, 500);
+    return jsonResponse({ error: '拒絕存取：系統不提供預設 API Key，請於前端輸入您個人的 API Key' }, 401);
+  }
+  if (!model) {
+    return jsonResponse({ error: '請指定要使用的 AI 模型名稱 (model)' }, 400);
   }
 
   const userText = payload.text || '';
@@ -130,40 +132,24 @@ function handleParseExpense(payload) {
     return jsonResponse({ error: '請提供要解析的記帳文字' }, 400);
   }
 
-  const categoryNames = categories.map(c => c.name).join(', ') || '餐飲, 交通, 購物, 娛樂, 居家, 醫療, 投資, 薪資, 其他';
-  const accountNames = accounts.map(a => a.name).join(', ') || '現金, 信用卡, 銀行帳戶';
+  const categoryNames = categories.map(function(c) { return c.name; }).join(', ') || '餐飲, 交通, 購物, 娛樂, 居家, 醫療, 投資, 薪資, 其他';
+  const accountNames = accounts.map(function(a) { return a.name; }).join(', ') || '現金, 信用卡, 銀行帳戶';
 
-  const systemPrompt = `你是一個專業的財務記帳 AI 助手。你的任務是將使用者提供的日常自然語言文字，精確解析為一筆或多筆結構化交易資料。
-今天的基準日期為：${today}。
+  const systemPrompt = '你是一個專業的財務記帳 AI 助手。你的任務是將使用者提供的日常自然語言文字，精確解析為一筆或多筆結構化交易資料。\n' +
+    '今天的基準日期為：' + today + '。\n\n' +
+    '【解析規則】：\n' +
+    '1. 幣別與金額：預設為 TWD（新台幣），金額必須為正整數數字。若使用者提及外幣（如「日幣/日圓/円/JPY」、「美金/美元/USD」、「韓元/韓幣/KRW」、「泰銖/THB」、「歐元/EUR」等），請同時輸出 originalCurrency（標準貨幣代碼）與 originalAmount（原幣金額），並以參考匯率（JPY≈0.215, USD≈32.5, KRW≈0.024, EUR≈35.2, THB≈0.95）折算為台幣整數填入 amount。\n' +
+    '2. 判斷交易類型 (type)："expense" (支出), "income" (收入), 或 "transfer" (轉帳)。\n' +
+    '3. 最佳匹配分類 (categoryName)：請盡量優先從可選分類列表選擇：[' + categoryNames + ']。\n' +
+    '4. 帳戶名稱 (accountName)：若提及支付方式（如刷卡、悠遊卡、現金、中信等），比對可用帳戶：[' + accountNames + ']。未提及預設為第一個或「現金錢包」。\n' +
+    '5. 日期 (date)：若提及「昨天」、「前天」、「上週五」等，以基準日 (' + today + ') 推算正確 YYYY-MM-DD；未提及則為今日 ' + today + '。\n' +
+    '6. 備註 (note)：清楚簡潔的項目摘要。\n' +
+    '7. 標籤 (tags)：1~3 個繁體中文標籤陣列。\n' +
+    '8. 信心度 (confidence)：0.0 ~ 1.0。\n\n' +
+    '【回傳格式】：\n' +
+    '必須嚴格遵守 JSON 陣列格式，不得輸出任何 Markdown 標記。';
 
-【解析規則】：
-1. 幣別與金額：預設為 TWD（新台幣），金額必須為正整數數字。若使用者提及外幣（如「日幣/日圓/円/JPY」、「美金/美元/USD」、「韓元/韓幣/KRW」、「泰銖/THB」、「歐元/EUR」等），請同時輸出 originalCurrency（標準貨幣代碼）與 originalAmount（原幣金額），並以參考匯率（JPY≈0.215, USD≈32.5, KRW≈0.024, EUR≈35.2, THB≈0.95）折算為台幣整數填入 amount。
-2. 判斷交易類型 (type)："expense" (支出), "income" (收入), 或 "transfer" (轉帳)。
-3. 最佳匹配分類 (categoryName)：請盡量優先從可選分類列表選擇：[${categoryNames}]。
-4. 帳戶名稱 (accountName)：若提及支付方式（如刷卡、悠遊卡、現金、中信等），比對可用帳戶：[${accountNames}]。未提及預設為第一個或「現金錢包」。
-5. 日期 (date)：若提及「昨天」、「前天」、「上週五」等，以基準日 (${today}) 推算正確 YYYY-MM-DD；未提及則為今日 ${today}。
-6. 備註 (note)：清楚簡潔的項目摘要。
-7. 標籤 (tags)：1~3 個繁體中文標籤陣列。
-8. 信心度 (confidence)：0.0 ~ 1.0。
-
-【回傳格式】：
-必須嚴格遵守 JSON 陣列格式，不得輸出任何 Markdown 標記：
-[
-  {
-    "type": "expense" | "income" | "transfer",
-    "amount": number,
-    "originalCurrency": string | undefined,
-    "originalAmount": number | undefined,
-    "categoryName": string,
-    "accountName": string,
-    "note": string,
-    "date": "YYYY-MM-DD",
-    "tags": string[],
-    "confidence": number
-  }
-]`;
-
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=' + apiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   const requestBody = {
     contents: [{ role: 'user', parts: [{ text: userText }] }],
@@ -185,7 +171,7 @@ function handleParseExpense(payload) {
   const responseText = response.getContentText();
 
   if (responseCode !== 200) {
-    return jsonResponse({ error: 'Gemini API 呼叫失敗 (' + responseCode + '): ' + responseText }, 502);
+    return jsonResponse({ error: 'AI API 呼叫失敗 (' + responseCode + '): ' + responseText }, 502);
   }
 
   const result = JSON.parse(responseText);
@@ -194,27 +180,29 @@ function handleParseExpense(payload) {
     const parsedTransactions = JSON.parse(rawContent);
     return jsonResponse(parsedTransactions);
   } catch (parseErr) {
-    return jsonResponse({ error: '解析 Gemini 輸出格式失敗: ' + parseErr.message }, 500);
+    return jsonResponse({ error: '解析 AI 輸出格式失敗: ' + parseErr.message }, 500);
   }
 }
 
 function handleSpendingInsights(payload) {
-  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const apiKey = (payload.apiKey || '').trim();
+  const model = (payload.model || '').trim();
   if (!apiKey) {
-    return jsonResponse({ error: 'GAS 未設定 GEMINI_API_KEY' }, 500);
+    return jsonResponse({ error: '拒絕存取：系統不提供預設 API Key，請於前端輸入您個人的 API Key' }, 401);
+  }
+  if (!model) {
+    return jsonResponse({ error: '請指定要使用的 AI 模型名稱 (model)' }, 400);
   }
 
-  const prompt = `你是一位資深個人財務顧問。請根據以下使用者的月度財務數據摘要，提供 3 到 4 點精闢、實用且具建設性的繁體中文財務洞察與改善建議：
+  const prompt = '你是一位資深個人財務顧問。請根據以下使用者的月度財務數據摘要，提供 3 到 4 點精闢、實用且具建設性的繁體中文財務洞察與改善建議：\n\n' +
+    '【財務數據摘要】：\n' +
+    JSON.stringify(payload.summaryData || payload, null, 2) + '\n\n' +
+    '請以結構化、親切專業的格式輸出：\n' +
+    '1. 💡 本期財務健康度簡評\n' +
+    '2. ⚠️ 需關注的花費項目或超支風險\n' +
+    '3. 🎯 具體的省錢/資產配置建議';
 
-【財務數據摘要】：
-${JSON.stringify(payload, null, 2)}
-
-請以結構化、親切專業的格式輸出：
-1. 💡 本期財務健康度簡評
-2. ⚠️ 需關注的花費項目或超支風險
-3. 🎯 具體的省錢/資產配置建議`;
-
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key=' + apiKey;
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   const requestBody = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
@@ -229,7 +217,7 @@ ${JSON.stringify(payload, null, 2)}
   });
 
   if (response.getResponseCode() !== 200) {
-    return jsonResponse({ error: 'Gemini 洞察生成失敗' }, 502);
+    return jsonResponse({ error: 'AI 洞察生成失敗' }, 502);
   }
 
   const result = JSON.parse(response.getContentText());

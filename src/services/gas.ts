@@ -1,19 +1,26 @@
 import { ParsedTransaction, StockQuote, StockSearchResult, StockMarket } from '@/types';
 import { auth } from '@/lib/firebase';
-import { getExchangeRateForCurrency } from './exchangeRate';
+import {
+  AI_PROVIDERS,
+  loadUserAIConfig,
+  parseExpenseWithUserAI,
+  generateSpendingInsightsWithUserAI
+} from './ai';
 
-// 從環境變數讀取 Google Apps Script Web App 部署 URL
+// 從環境變數讀取 Google Apps Script Web App 部署 URL (僅用於 Yahoo Finance 股市報價代理)
 export const GAS_URL = import.meta.env.VITE_GAS_DEPLOYMENT_URL || '';
 
 export interface DiagnosticResult {
   gasConnected: boolean;
   gasUrl: string;
   hasGeminiKey: boolean;
+  aiProviderName: string;
   geminiModel: string;
   latencyMs: number;
   testStock2880?: StockQuote;
   testStock2330?: StockQuote;
   testAIResult?: ParsedTransaction[];
+  aiError?: string;
   error?: string;
 }
 
@@ -25,13 +32,13 @@ interface GASResponse<T> {
 }
 
 /**
- * 呼叫 Google Apps Script 後端通用方法
+ * 呼叫 Google Apps Script 後端通用方法 (僅限股市報價與非 AI 代理)
  */
 async function callGAS<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
   const isMockMode = !GAS_URL || GAS_URL.includes('your_deployment_id');
 
   if (isMockMode) {
-    console.warn(`[GAS] 尚未設定 VITE_GAS_DEPLOYMENT_URL，使用本機智慧模擬模式: ${action}`);
+    console.warn(`[GAS] 尚未設定 VITE_GAS_DEPLOYMENT_URL，使用本機股市模擬模式: ${action}`);
     return mockGASResponse<T>(action, payload);
   }
 
@@ -75,93 +82,86 @@ async function callGAS<T>(action: string, payload: Record<string, unknown> = {})
 }
 
 /**
- * 執行完整的 GAS & Gemini & Yahoo Finance 報價連線診斷
+ * 執行完整的 GAS 股市代理 & 使用者自備 AI 金鑰連線診斷
+ * 注意：嚴格使用使用者自行輸入的 API Key 與自選模型，絕不讀取或呼叫 GAS 伺服器的預設金鑰
  */
 export async function runSystemDiagnostics(): Promise<DiagnosticResult> {
   const startTime = Date.now();
+  const userAIConfig = loadUserAIConfig();
+  const providerMeta = AI_PROVIDERS[userAIConfig.provider] || AI_PROVIDERS.gemini;
+  const hasUserKey = Boolean(userAIConfig.apiKey.trim() && userAIConfig.isKeyValid && userAIConfig.selectedModel);
+
   const result: DiagnosticResult = {
     gasConnected: false,
     gasUrl: GAS_URL,
-    hasGeminiKey: false,
-    geminiModel: 'gemini-3.7-flash',
+    hasGeminiKey: hasUserKey,
+    aiProviderName: providerMeta.shortName,
+    geminiModel: userAIConfig.selectedModel || '未選擇模型',
     latencyMs: 0
   };
 
-  if (!GAS_URL) {
-    result.error = '尚未在 .env 設定 VITE_GAS_DEPLOYMENT_URL';
-    return result;
-  }
-
-  try {
-    // 1. 測試 POST 進入點
-    const pingRes = await fetch(GAS_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'testConnection', payload: {} })
-    });
-
-    const pingText = await pingRes.text();
-    result.latencyMs = Date.now() - startTime;
-
-    if (pingText.includes('doPost')) {
-      result.error = 'GAS 找不到 doPost 函式！請將專案中的 gas/Code.gs 複製貼到 Google Apps Script 並點擊「部署 > 管理部署作業 > 編輯 > 建立新版本 > 部署」。';
-      return result;
-    }
-
-    if (pingText.startsWith('<!DOCTYPE html>')) {
-      result.error = 'GAS 回傳 HTML 頁面，請確認 GAS 部署設定中的「誰可以存取」設為「所有人 (Anyone)」。';
-      return result;
-    }
-
-    const pingJson = JSON.parse(pingText);
-    result.gasConnected = Boolean(pingJson.success);
-    result.hasGeminiKey = Boolean(pingJson.data?.isGeminiConfigured);
-
-    // 2. 測試 Yahoo Finance 報價 (2880 華南金)
+  // 1. 測試 GAS 股市報價代理伺服器
+  if (GAS_URL) {
     try {
-      const quoteRes = await fetch(GAS_URL, {
+      const pingRes = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'getStockQuote', payload: { symbol: '2880.TW' } })
+        body: JSON.stringify({ action: 'testConnection', payload: {} })
       });
-      const quoteJson = await quoteRes.json();
-      if (quoteJson.success) {
-        result.testStock2880 = quoteJson.data;
+
+      const pingText = await pingRes.text();
+      result.latencyMs = Date.now() - startTime;
+
+      if (pingText.includes('doPost')) {
+        result.error = 'GAS 找不到 doPost 函式！請將專案中的 gas/Code.gs 複製貼到 Google Apps Script 並重新部署。';
+      } else if (pingText.startsWith('<!DOCTYPE html>')) {
+        result.error = 'GAS 回傳 HTML 頁面，請確認 GAS 部署設定中的「誰可以存取」設為「所有人 (Anyone)」。';
+      } else {
+        const pingJson = JSON.parse(pingText);
+        result.gasConnected = Boolean(pingJson.success);
       }
-    } catch (e) {}
 
-    // 3. 測試 Gemini AI 記帳解析
-    if (result.hasGeminiKey) {
-      try {
-        const aiRes = await fetch(GAS_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'parseExpense',
-            payload: {
-              text: '今天午餐在麥當勞刷卡吃了 180 元',
-              categories: [{ id: 'cat_1', name: '餐飲美食' }],
-              accounts: [{ id: 'acc_1', name: '信用卡' }]
-            }
-          })
-        });
-        const aiJson = await aiRes.json();
-        if (aiJson.success) {
-          result.testAIResult = aiJson.data;
-        }
-      } catch (e) {}
+      // 2. 測試 Yahoo Finance 報價 (2880 華南金)
+      if (result.gasConnected) {
+        try {
+          const quoteRes = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'getStockQuote', payload: { symbol: '2880.TW' } })
+          });
+          const quoteJson = await quoteRes.json();
+          if (quoteJson.success) {
+            result.testStock2880 = quoteJson.data;
+          }
+        } catch {}
+      }
+    } catch (err: any) {
+      result.latencyMs = Date.now() - startTime;
+      result.error = err.message || 'GAS 連線測試超時或失敗';
     }
-
-    return result;
-  } catch (err: any) {
-    result.latencyMs = Date.now() - startTime;
-    result.error = err.message || '連線測試超時或失敗';
-    return result;
+  } else {
+    result.error = '尚未在 .env 設定 VITE_GAS_DEPLOYMENT_URL';
   }
+
+  // 3. 測試使用者自備 AI API Key 與自選模型記帳解析 (絕不使用系統或 GAS 金鑰)
+  if (hasUserKey) {
+    try {
+      const aiParsed = await parseExpenseWithUserAI(
+        '今天午餐在麥當勞刷卡吃了 180 元',
+        [{ id: 'cat_1', name: '餐飲美食' }],
+        [{ id: 'acc_1', name: '信用卡' }]
+      );
+      result.testAIResult = aiParsed;
+    } catch (aiErr: any) {
+      result.aiError = aiErr.message || 'AI 模型測試解析失敗';
+    }
+  }
+
+  return result;
 }
 
 /**
- * 1. AI 記帳：將自然語言解析為結構化交易清單 (Gemini 3.7 Flash)
+ * 1. AI 記帳：將自然語言解析為結構化交易清單（嚴格使用使用者自備 API Key 與自選模型）
  */
 export async function parseExpenseTextWithGemini(
   text: string,
@@ -169,12 +169,7 @@ export async function parseExpenseTextWithGemini(
   accounts: Array<{ id: string; name: string }>,
   userDate?: string
 ): Promise<ParsedTransaction[]> {
-  return callGAS<ParsedTransaction[]>('parseExpense', {
-    text,
-    categories,
-    accounts,
-    userDate
-  });
+  return parseExpenseWithUserAI(text, categories, accounts, userDate);
 }
 
 /**
@@ -201,66 +196,25 @@ export async function fetchBatchStockQuotes(
 }
 
 /**
- * 5. 取得 AI 花費財務分析洞察
+ * 5. 取得 AI 花費財務分析洞察（嚴格使用使用者自備 API Key 與自選模型）
  */
 export async function fetchSpendingInsights(summaryData: Record<string, unknown>): Promise<string> {
-  const result = await callGAS<{ insights: string }>('getSpendingInsights', summaryData);
-  return result.insights || '本月收支維持在良好狀態，建議持續保持記帳習慣！';
+  const insights = await generateSpendingInsightsWithUserAI(summaryData);
+  return insights || '本月收支維持在良好狀態，建議持續保持記帳習慣！';
 }
 
 /* ==========================================================================
-   智慧本地 Fallback 模擬器 (在無 GAS URL 時自動接手)
+   本地股市 Fallback 模擬器 (僅限股市報價，AI 功能絕不模擬亦無預設金鑰)
    ========================================================================== */
 
 function mockGASResponse<T>(action: string, payload: Record<string, any>): Promise<T> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     setTimeout(() => {
-      if (action === 'parseExpense') {
-        const text: string = payload.text || '';
-        const today = payload.userDate || new Date().toISOString().split('T')[0];
-        
-        const amountMatch = text.match(/\d+/);
-        const rawAmount = amountMatch ? parseInt(amountMatch[0], 10) : 100;
-        
-        let originalCurrency: string | undefined;
-        const lower = text.toLowerCase();
-        if (text.includes('日圓') || text.includes('日幣') || text.includes('円') || lower.includes('jpy')) {
-          originalCurrency = 'JPY';
-        } else if (text.includes('美金') || text.includes('美元') || lower.includes('usd')) {
-          originalCurrency = 'USD';
-        } else if (text.includes('韓元') || text.includes('韓幣') || lower.includes('krw')) {
-          originalCurrency = 'KRW';
-        } else if (text.includes('泰銖') || lower.includes('thb')) {
-          originalCurrency = 'THB';
-        } else if (text.includes('歐元') || lower.includes('eur')) {
-          originalCurrency = 'EUR';
-        } else if (text.includes('港幣') || lower.includes('hkd')) {
-          originalCurrency = 'HKD';
-        }
-
-        const rate = originalCurrency ? getExchangeRateForCurrency(originalCurrency) : 1.0;
-        const finalTWD = originalCurrency ? Math.round(rawAmount * rate) : rawAmount;
-
-        let catName = '餐飲美食';
-        if (text.includes('車') || text.includes('油') || text.includes('捷運') || text.includes('悠遊卡')) catName = '交通運輸';
-        else if (text.includes('買') || text.includes('全聯') || text.includes('家樂福') || text.includes('衣')) catName = '日常購物';
-        else if (text.includes('薪') || text.includes('獎金') || text.includes('收入')) catName = '薪資收入';
-
-        const mockItem: ParsedTransaction = {
-          type: text.includes('薪') || text.includes('收入') ? 'income' : 'expense',
-          amount: finalTWD,
-          originalCurrency,
-          originalAmount: originalCurrency ? rawAmount : undefined,
-          exchangeRate: originalCurrency ? rate : undefined,
-          categoryName: catName,
-          accountName: payload.accounts?.[0]?.name || '現金錢包',
-          note: text.replace(/\d+/g, '').replace(/(日圓|日幣|円|美元|美金|韓元|韓幣|泰銖|歐元|港幣|元|塊|花了|支出|買)/g, '').trim() || text,
-          date: today,
-          tags: originalCurrency ? ['AI智能記帳', '旅行外幣'] : ['本機智慧模擬模式'],
-          confidence: 0.88
-        };
-        resolve([mockItem] as unknown as T);
-      } else if (action === 'getStockQuote') {
+      if (action === 'parseExpense' || action === 'getSpendingInsights') {
+        reject(new Error('系統不預設任何 API Key，請先至「系統設定」輸入您的個人 API Key 並選擇模型'));
+        return;
+      }
+      if (action === 'getStockQuote') {
         const symbol: string = payload.symbol || '2880.TW';
         const isTW = payload.market === 'TW' || symbol.includes('.TW') || symbol.includes('.TWO') || /^\d{4,6}$/.test(symbol);
         const code = symbol.replace('.TW', '').replace('.TWO', '');

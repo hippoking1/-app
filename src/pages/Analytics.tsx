@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useTransactions, useCategories, useBudgets } from '@/hooks/useFirestore';
@@ -98,7 +99,8 @@ const BarCustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export const Analytics: React.FC = () => {
-  const { currentMonth } = useAppStore();
+  const navigate = useNavigate();
+  const { currentMonth, aiConfig, addToast } = useAppStore();
   const { transactions } = useTransactions();
   const { categories } = useCategories();
   const { budgets } = useBudgets();
@@ -115,8 +117,17 @@ export const Analytics: React.FC = () => {
   // 3. 每日花費
   const { dailyData, totalExpense, avgDaily } = getDailySpending(transactions, currentMonth);
 
-  // AI 洞察分析請求
+  // AI 洞察分析請求 (嚴格要求使用者自備 API Key 與自選模型)
   const handleGenerateInsights = async () => {
+    if (!aiConfig.apiKey.trim() || !aiConfig.isKeyValid || !aiConfig.selectedModel) {
+      addToast({
+        type: 'warning',
+        message: '請先至「系統設定」輸入您個人的 API Key 並選擇 AI 模型'
+      });
+      navigate('/settings');
+      return;
+    }
+
     setLoadingInsights(true);
     try {
       const summaryPayload = {
@@ -129,7 +140,7 @@ export const Analytics: React.FC = () => {
       const text = await fetchSpendingInsights(summaryPayload);
       setInsightText(text);
     } catch (err: any) {
-      setInsightText('目前無法取得 AI 分析報告，請稍後再試。');
+      setInsightText(`⚠️ 目前無法取得 AI 分析報告：${err.message || '請確認 API Key 與模型設定'}`);
     } finally {
       setLoadingInsights(false);
     }
@@ -155,7 +166,7 @@ export const Analytics: React.FC = () => {
           loading={loadingInsights}
           icon={<Sparkles size={16} />}
         >
-          產出 AI 財務健檢
+          產出 AI 財務健檢 {aiConfig.selectedModel ? `(${aiConfig.selectedModel})` : ''}
         </Button>
       </div>
 
@@ -163,7 +174,7 @@ export const Analytics: React.FC = () => {
       {insightText && (
         <Card glass padding="lg" style={{ border: '1px solid var(--purple)', backgroundColor: 'rgba(168, 85, 247, 0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--purple)', fontWeight: 800, fontSize: '15px' }}>
-            <Sparkles size={18} /> Gemini 3.7 Flash 財務洞察報告
+            <Sparkles size={18} /> {aiConfig.selectedModel || 'AI'} 財務洞察報告
           </div>
           <div style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
             {insightText}
