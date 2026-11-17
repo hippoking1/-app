@@ -38,6 +38,11 @@ interface AppState {
   setTheme: (theme: 'dark' | 'light') => void;
   toggleTheme: () => void;
 
+  // 股市漲跌色彩慣例 ('intl' = 綠漲紅跌, 'tw' = 台股紅漲綠跌)
+  marketColorScheme: 'intl' | 'tw';
+  setMarketColorScheme: (scheme: 'intl' | 'tw') => void;
+  toggleMarketColorScheme: () => void;
+
   // 側邊欄展開
   isSidebarCollapsed: boolean;
   toggleSidebar: () => void;
@@ -101,6 +106,17 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleTheme: () => {
     const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
     get().setTheme(nextTheme);
+  },
+
+  marketColorScheme: (localStorage.getItem('smart_market_color') as 'intl' | 'tw') || 'intl',
+  setMarketColorScheme: (scheme) => {
+    localStorage.setItem('smart_market_color', scheme);
+    document.documentElement.setAttribute('data-market-color', scheme);
+    set({ marketColorScheme: scheme });
+  },
+  toggleMarketColorScheme: () => {
+    const next = get().marketColorScheme === 'intl' ? 'tw' : 'intl';
+    get().setMarketColorScheme(next);
   },
 
   isSidebarCollapsed: false,

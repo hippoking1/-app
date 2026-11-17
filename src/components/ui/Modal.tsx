@@ -48,9 +48,7 @@ export const Modal: React.FC<ModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backgroundColor: 'var(--bg-overlay)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -76,9 +74,9 @@ export const Modal: React.FC<ModalProps> = ({
           maxWidth: maxWidth,
           maxHeight: '90vh',
           backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-glass)',
+          border: '1px solid var(--border-focus)',
           borderRadius: 'var(--radius-xl)',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)',
+          boxShadow: 'var(--shadow-lg)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -95,7 +93,7 @@ export const Modal: React.FC<ModalProps> = ({
             flexShrink: 0
           }}
         >
-          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>
             {title}
           </div>
           <button

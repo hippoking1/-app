@@ -26,6 +26,7 @@ export const Tabs: React.FC<TabsProps> = ({
         backgroundColor: 'var(--bg-tertiary)',
         padding: '4px',
         borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border)',
         gap: '4px',
         width: fullWidth ? '100%' : 'fit-content'
       }}
@@ -42,16 +43,16 @@ export const Tabs: React.FC<TabsProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              padding: '8px 16px',
+              height: '32px',
+              padding: '0 14px',
               fontSize: '13px',
-              fontWeight: 600,
-              color: isActive ? '#ffffff' : 'var(--text-secondary)',
+              fontWeight: 500,
+              color: isActive ? 'var(--on-primary)' : 'var(--text-secondary)',
               backgroundColor: isActive ? 'var(--primary)' : 'transparent',
               borderRadius: 'var(--radius-md)',
               border: 'none',
               cursor: 'pointer',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: isActive ? '0 2px 8px rgba(99, 102, 241, 0.35)' : 'none'
+              transition: 'background-color 0.15s var(--ease-out), color 0.15s var(--ease-out)'
             }}
           >
             {tab.icon}

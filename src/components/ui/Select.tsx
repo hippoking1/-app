@@ -1,4 +1,5 @@
 import React from 'react';
+import { ChevronDown } from 'lucide-react';
 
 interface SelectOption {
   value: string;
@@ -24,7 +25,7 @@ export const Select: React.FC<SelectProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
       {label && (
-        <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+        <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
           {label}
         </label>
       )}
@@ -35,12 +36,14 @@ export const Select: React.FC<SelectProps> = ({
             backgroundColor: 'var(--bg-tertiary)',
             border: `1px solid ${error ? 'var(--expense)' : 'var(--border)'}`,
             borderRadius: 'var(--radius-md)',
-            padding: '10px 14px',
+            padding: '8px 34px 8px 12px',
+            minHeight: '36px',
             color: 'var(--text-primary)',
             fontSize: '14px',
             outline: 'none',
             appearance: 'none',
             cursor: 'pointer',
+            transition: 'border-color 0.15s var(--ease-out)',
             ...style
           }}
           className={className}
@@ -56,19 +59,19 @@ export const Select: React.FC<SelectProps> = ({
             </option>
           ))}
         </select>
-        {/* 自訂下拉箭頭 */}
         <div
           style={{
             position: 'absolute',
-            right: '14px',
+            right: '10px',
             top: '50%',
             transform: 'translateY(-50%)',
             pointerEvents: 'none',
             color: 'var(--text-muted)',
-            fontSize: '10px'
+            display: 'flex',
+            alignItems: 'center'
           }}
         >
-          ▼
+          <ChevronDown size={16} strokeWidth={1.5} />
         </div>
       </div>
       {error && (

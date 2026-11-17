@@ -30,20 +30,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     >
       <div
         style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: 'var(--radius-full)',
+          width: '48px',
+          height: '48px',
+          borderRadius: 'var(--radius-lg)',
           backgroundColor: 'var(--bg-tertiary)',
+          border: '1px solid var(--border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--primary-light)',
-          marginBottom: 'var(--space-2)'
+          color: 'var(--text-muted)',
+          marginBottom: 'var(--space-1)'
         }}
       >
         {icon}
       </div>
-      <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>
+      <h4 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
         {title}
       </h4>
       {description && (

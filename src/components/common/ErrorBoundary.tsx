@@ -77,7 +77,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle size={28} />
             </div>
 
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: 0 }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 500, margin: 0 }}>
               畫面載入暫時遇到狀況
             </h2>
 

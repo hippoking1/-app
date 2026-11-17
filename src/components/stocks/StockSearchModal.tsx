@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { useStockSearch } from '@/hooks/useStockPrice';
 import { StockSearchResult } from '@/types';
-import { Search, PlusCircle, Loader2, Sparkles } from 'lucide-react';
+import { Search, PlusCircle, Loader2, ArrowRight } from 'lucide-react';
 import { formatStockPrice } from '@/utils/analytics';
 
 interface StockSearchModalProps {
@@ -28,13 +28,13 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
   const isNumericCode = /^\d+$/.test(trimmed);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="🔍 搜尋股票行情 (台股 / 興櫃 / 美股)">
+    <Modal isOpen={isOpen} onClose={onClose} title="搜尋股票行情 (台股 / 興櫃 / 美股)">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
         <Input
-          placeholder="輸入代碼或名稱 (例如：7829、2330、台積電、AAPL)"
+          placeholder="輸入代碼或名稱，例如 2330、台積電、AAPL"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          icon={<Search size={18} />}
+          icon={<Search size={16} strokeWidth={1.5} />}
           autoFocus
         />
 
@@ -57,23 +57,22 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
               alignItems: 'center',
               justifyContent: 'space-between',
               padding: '12px 14px',
-              backgroundColor: 'var(--primary-glow)',
-              border: '1px solid var(--primary)',
+              backgroundColor: 'var(--accent-subtle)',
+              border: '1px solid var(--border-focus)',
               borderRadius: 'var(--radius-md)',
               color: 'var(--text-primary)',
               cursor: 'pointer',
-              textAlign: 'left',
-              boxShadow: 'var(--shadow-sm)'
+              textAlign: 'left'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <PlusCircle size={18} color="var(--primary-light)" />
-              <span style={{ fontSize: '13px', fontWeight: 700 }}>
-                直接以「{trimmed}」建立興櫃 / 自訂股票持倉
+              <PlusCircle size={16} strokeWidth={1.5} color="var(--accent-text)" />
+              <span style={{ fontSize: '13px', fontWeight: 500 }}>
+                直接以「{trimmed}」建立興櫃 / 自訂持倉
               </span>
             </div>
-            <span style={{ fontSize: '11px', color: 'var(--primary-light)', fontWeight: 600 }}>
-              點擊建倉 ➔
+            <span style={{ fontSize: '12px', color: 'var(--accent-text)', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              建倉 <ArrowRight size={14} strokeWidth={1.5} />
             </span>
           </button>
         )}
@@ -81,8 +80,8 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
         {/* 搜尋中狀態 */}
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', gap: '8px', color: 'var(--text-muted)' }}>
-            <Loader2 size={20} className="animate-spin" />
-            <span>查詢行情中...</span>
+            <Loader2 size={16} strokeWidth={1.5} className="animate-spin" />
+            <span>查詢行情中</span>
           </div>
         )}
 
@@ -103,39 +102,31 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
                 color: 'var(--text-primary)',
                 cursor: 'pointer',
                 textAlign: 'left',
-                transition: 'all 0.15s'
+                transition: 'border-color 0.15s var(--ease-out)'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--primary)')}
+              onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--border-focus)')}
               onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border)')}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span
+                  className="font-mono"
                   style={{
                     fontSize: '11px',
-                    fontWeight: 700,
+                    fontWeight: 500,
                     padding: '2px 6px',
                     borderRadius: 'var(--radius-xs)',
-                    backgroundColor:
-                      item.stockType?.includes('興櫃') || item.symbol.endsWith('.TWO')
-                        ? 'rgba(168, 85, 247, 0.2)'
-                        : item.market === 'TW'
-                        ? 'rgba(16, 185, 129, 0.2)'
-                        : 'rgba(99, 102, 241, 0.2)',
-                    color:
-                      item.stockType?.includes('興櫃') || item.symbol.endsWith('.TWO')
-                        ? 'var(--purple)'
-                        : item.market === 'TW'
-                        ? 'var(--income)'
-                        : 'var(--primary-light)'
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    color: item.market === 'TW' ? 'var(--accent-text)' : 'var(--text-secondary)'
                   }}
                 >
                   {item.stockType || item.market}
                 </span>
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500 }}>
                     {item.code} {item.name}
                   </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     {item.symbol}
                   </div>
                 </div>
@@ -143,12 +134,12 @@ export const StockSearchModal: React.FC<StockSearchModalProps> = ({
 
               {item.price > 0 && (
                 <div style={{ textAlign: 'right' }}>
-                  <div className="font-mono" style={{ fontSize: '14px', fontWeight: 800 }}>
+                  <div className="font-mono" style={{ fontSize: '14px', fontWeight: 500 }}>
                     {item.currency === 'USD' ? 'US$' : '$'}
                     {formatStockPrice(item.price, item.currency)}
                   </div>
                   {item.change !== undefined && item.change !== 0 && (
-                    <div style={{ fontSize: '11px', color: item.change > 0 ? 'var(--income)' : 'var(--expense)' }}>
+                    <div className="font-mono" style={{ fontSize: '12px', color: item.change > 0 ? 'var(--gain)' : 'var(--loss)' }}>
                       {item.change > 0 ? '+' : ''}{item.change}
                     </div>
                   )}

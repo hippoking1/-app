@@ -12,7 +12,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
         {label && (
-          <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+          <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>
             {label}
           </label>
         )}
@@ -38,14 +38,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               backgroundColor: 'var(--bg-tertiary)',
               border: `1px solid ${error ? 'var(--expense)' : 'var(--border)'}`,
               borderRadius: 'var(--radius-md)',
-              padding: `10px 14px 10px ${icon ? '38px' : '14px'}`,
+              padding: `8px 12px 8px ${icon ? '36px' : '12px'}`,
+              minHeight: '36px',
               color: 'var(--text-primary)',
               fontSize: '14px',
               outline: 'none',
-              transition: 'border-color 0.2s',
+              transition: 'border-color 0.15s var(--ease-out)',
               ...style
             }}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--primary)')}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--border-focus)')}
             onBlur={(e) => (e.target.style.borderColor = error ? 'var(--expense)' : 'var(--border)')}
             className={className}
             {...props}

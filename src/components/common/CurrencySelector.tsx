@@ -157,23 +157,22 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                   onSelectCurrency(code);
                 }}
                 style={{
-                  padding: isEditMode && !isTwd ? '5px 24px 5px 10px' : '5px 12px',
-                  borderRadius: 'var(--radius-full)',
-                  border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border)',
-                  backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.18)' : 'var(--bg-tertiary)',
-                  color: isSelected ? 'var(--primary-light)' : 'var(--text-secondary)',
+                  padding: isEditMode && !isTwd ? '4px 24px 4px 10px' : '4px 10px',
+                  borderRadius: 'var(--radius-md)',
+                  border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                  backgroundColor: isSelected ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
+                  color: isSelected ? 'var(--accent-text)' : 'var(--text-secondary)',
                   fontSize: '12px',
-                  fontWeight: isSelected ? 800 : 600,
+                  fontWeight: isSelected ? 500 : 400,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '6px',
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  userSelect: 'none',
-                  boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.25)' : 'none'
+                  transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)',
+                  userSelect: 'none'
                 }}
               >
-                <span style={{ fontSize: '14px', lineHeight: 1 }}>{info.flag}</span>
+                <span className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{info.symbol}</span>
                 <span>{info.code}</span>
               </button>
 
@@ -219,18 +218,18 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
           }}
           title="搜尋並新增全球貨幣..."
           style={{
-            padding: '5px 12px',
-            borderRadius: 'var(--radius-full)',
+            padding: '4px 10px',
+            borderRadius: 'var(--radius-md)',
             backgroundColor: 'var(--bg-tertiary)',
             border: '1px dashed var(--border-focus)',
-            color: 'var(--primary-light)',
+            color: 'var(--text-secondary)',
             fontSize: '12px',
-            fontWeight: 700,
+            fontWeight: 500,
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
             cursor: 'pointer',
-            transition: 'all 0.15s'
+            transition: 'border-color 0.15s var(--ease-out)'
           }}
         >
           <Plus size={13} strokeWidth={2.5} />
@@ -341,14 +340,14 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                   }}
                   style={{
                     padding: '10px 12px',
-                    borderRadius: 'var(--radius-lg)',
+                    borderRadius: 'var(--radius-md)',
                     backgroundColor: isSelected
-                      ? 'rgba(99, 102, 241, 0.18)'
+                      ? 'var(--accent-subtle)'
                       : isPinned
                       ? 'var(--bg-tertiary)'
                       : 'var(--bg-secondary)',
                     border: isSelected
-                      ? '1.5px solid var(--primary)'
+                      ? '1px solid var(--accent)'
                       : isPinned
                       ? '1px solid var(--border-focus)'
                       : '1px solid var(--border)',
@@ -356,18 +355,18 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.2)' : 'none'
+                    transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                    <span style={{ fontSize: '20px', lineHeight: 1 }}>{c.flag}</span>
+                    <span className="font-mono" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', width: '24px' }}>{c.symbol}</span>
                     <div style={{ minWidth: 0 }}>
                       <div
+                        className="font-mono"
                         style={{
                           fontSize: '13px',
-                          fontWeight: 800,
-                          color: isSelected ? 'var(--primary-light)' : 'var(--text-primary)',
+                          fontWeight: 500,
+                          color: isSelected ? 'var(--accent-text)' : 'var(--text-primary)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '4px'
@@ -402,24 +401,24 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                           fontSize: '11px',
                           display: 'flex',
                           alignItems: 'center',
-                          backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                          padding: '3px 6px',
-                          borderRadius: 'var(--radius-sm)',
-                          fontWeight: 700
+                          backgroundColor: 'var(--income-subtle)',
+                          padding: '2px 6px',
+                          borderRadius: 'var(--radius-xs)',
+                          fontWeight: 500
                         }}
                       >
-                        <Check size={12} style={{ marginRight: '2px' }} />
+                        <Check size={12} strokeWidth={1.5} style={{ marginRight: '2px' }} />
                         已加
                       </span>
                     ) : (
                       <span
                         style={{
-                          color: 'var(--primary-light)',
+                          color: 'var(--accent-text)',
                           fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: 'rgba(99, 102, 241, 0.12)',
-                          padding: '3px 6px',
-                          borderRadius: 'var(--radius-sm)'
+                          fontWeight: 500,
+                          backgroundColor: 'var(--accent-subtle)',
+                          padding: '2px 6px',
+                          borderRadius: 'var(--radius-xs)'
                         }}
                       >
                         +加入

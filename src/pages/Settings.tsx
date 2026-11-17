@@ -21,7 +21,6 @@ import {
   Sun,
   Download,
   LogOut,
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   Activity,
@@ -38,11 +37,23 @@ import {
   Trash2,
   ExternalLink,
   Search,
-  Lock
+  Lock,
+  ArrowUpDown
 } from 'lucide-react';
 
 export const Settings: React.FC = () => {
-  const { user, setUser, aiConfig, setAIConfig, clearAIConfig, theme, toggleTheme, addToast } = useAppStore();
+  const {
+    user,
+    setUser,
+    aiConfig,
+    setAIConfig,
+    clearAIConfig,
+    theme,
+    toggleTheme,
+    marketColorScheme,
+    setMarketColorScheme,
+    addToast
+  } = useAppStore();
   const { accounts } = useAccounts();
   const { transactions } = useTransactions();
   const { categories } = useCategories();
@@ -150,7 +161,7 @@ export const Settings: React.FC = () => {
 
       addToast({
         type: 'success',
-        message: `✅ 金鑰驗證成功！已載入 ${AI_PROVIDERS[res.provider].shortName} 共 ${res.models.length} 個可用模型`
+        message: `金鑰驗證成功，已載入 ${AI_PROVIDERS[res.provider].shortName} 共 ${res.models.length} 個可用模型`
       });
     } catch (err: any) {
       const msg = err.message || 'API Key 驗證失敗，請確認金鑰是否正確';
@@ -175,14 +186,14 @@ export const Settings: React.FC = () => {
     setKeyError(null);
     setModelSearch('');
     setDiagResult(null);
-    addToast({ type: 'info', message: '🔒 已從本機清除您的 API Key 與模型設定' });
+    addToast({ type: 'info', message: '已清除本機 API Key 與模型設定' });
   };
 
   // 一鍵安裝獨立視窗 App
   const handleInstallApp = async () => {
     const installed = await promptInstall();
     if (installed) {
-      addToast({ type: 'success', message: '🎉 已成功安裝獨立應用程式！之後可由桌面圖示直接開啟' });
+      addToast({ type: 'success', message: '已安裝獨立應用程式，可由桌面圖示開啟' });
     }
   };
 
@@ -190,17 +201,17 @@ export const Settings: React.FC = () => {
   const handleCheckUpdate = async () => {
     const found = await triggerManualCheck();
     if (found) {
-      addToast({ type: 'info', message: `發現新版本 v${latestVersion || currentVersion}，正在準備更新！` });
+      addToast({ type: 'info', message: `發現新版本 v${latestVersion || currentVersion}，準備更新` });
     } else {
-      addToast({ type: 'success', message: `目前已是最新版本 (v${currentVersion})！` });
+      addToast({ type: 'success', message: `目前已是最新版本 (v${currentVersion})` });
     }
   };
 
   const runtimeLabelMap = {
-    electron: '💻 Windows 電腦獨立安裝版 (.exe 單一視窗鎖定)',
-    capacitor: '📱 Android 手機原生安裝版 (.apk 單一視窗鎖定)',
-    'pwa-standalone': '✨ 獨立應用程式視窗模式 (單一視窗防多分頁)',
-    browser: '🌐 瀏覽器分頁模式（建議安裝獨立 App 免開瀏覽器分頁）'
+    electron: 'Windows 獨立安裝版 (.exe 單一視窗)',
+    capacitor: 'Android 原生安裝版 (.apk 單一視窗)',
+    'pwa-standalone': '獨立應用程式視窗模式 (單一視窗)',
+    browser: '瀏覽器分頁模式（建議安裝獨立 App）'
   };
 
   // 訪客帳號綁定 Google
@@ -270,45 +281,43 @@ export const Settings: React.FC = () => {
   };
 
   return (
-    <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: '800px' }}>
+    <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: '880px' }}>
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)' }}>
-          系統與偏好設定
+        <h1 style={{ fontSize: '28px', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+          系統設定
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-          個人 AI 金鑰與自由模型選擇 (BYOK)、獨立安裝包、帳戶管理與連線診斷
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+          個人 AI 金鑰與模型 (BYOK)、應用程式安裝、外觀慣例與連線診斷
         </p>
       </div>
 
       {/* 0. 電腦與手機獨立安裝檔 & 版本自動更新中心 */}
       <Card
-        glass
         padding="lg"
         style={{
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
-          border: '1px solid var(--border-focus)'
+          gap: '16px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <MonitorSmartphone size={18} color="var(--primary)" /> 獨立應用程式安裝 & 自動版本更新
+            <h3 style={{ fontSize: '15px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+              <MonitorSmartphone size={16} strokeWidth={1.5} color="var(--accent-text)" /> 獨立應用程式與版本更新
             </h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              免開瀏覽器分頁、強制單一視窗運行，並於每次啟動時自動偵測且同步最新版本
+              單一視窗運行，並於啟動時自動檢查同步最新版本
             </p>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {hasUpdate ? (
               <Button
-                variant="primary"
+                variant="accent"
                 size="sm"
                 onClick={applyUpdate}
                 loading={isUpdating}
-                icon={<Sparkles size={15} />}
+                icon={<RefreshCw size={14} strokeWidth={1.5} />}
               >
                 立即更新至 v{latestVersion}
               </Button>
@@ -318,7 +327,7 @@ export const Settings: React.FC = () => {
                 size="sm"
                 onClick={handleCheckUpdate}
                 loading={isChecking}
-                icon={<RefreshCw size={15} />}
+                icon={<RefreshCw size={14} strokeWidth={1.5} />}
               >
                 檢查版本更新
               </Button>
@@ -331,7 +340,7 @@ export const Settings: React.FC = () => {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '10px',
+            gap: '12px',
             backgroundColor: 'var(--bg-tertiary)',
             padding: '12px 14px',
             borderRadius: 'var(--radius-md)',
@@ -339,38 +348,38 @@ export const Settings: React.FC = () => {
           }}
         >
           <div>
-            <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>目前版本 / 建置編號</div>
-            <div style={{ fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>目前版本 / 建置編號</div>
+            <div className="font-mono" style={{ fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span>v{currentVersion}</span>
-              <code className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+              <code style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                 ({currentBuildId})
               </code>
               {!hasUpdate && (
                 <span style={{ color: 'var(--income)', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <CheckCircle2 size={13} /> 最新版
+                  <CheckCircle2 size={12} strokeWidth={1.5} /> 最新版
                 </span>
               )}
             </div>
           </div>
 
           <div>
-            <div style={{ color: 'var(--text-muted)', marginBottom: '2px' }}>目前運行模式</div>
-            <div style={{ fontWeight: 700, color: isStandaloneApp ? 'var(--income)' : 'var(--warning)' }}>
+            <div style={{ color: 'var(--text-muted)', marginBottom: '4px' }}>運行模式</div>
+            <div style={{ fontWeight: 500, color: isStandaloneApp ? 'var(--income)' : 'var(--text-secondary)' }}>
               {runtimeLabelMap[runtimeMode]}
             </div>
           </div>
         </div>
 
         {/* 安裝檔下載與一鍵桌面安裝區 */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
           {canPromptInstall && (
             <Button
               variant="primary"
               size="sm"
               onClick={handleInstallApp}
-              icon={<MonitorSmartphone size={16} />}
+              icon={<MonitorSmartphone size={14} strokeWidth={1.5} />}
             >
-              ⚡ 一鍵直接安裝為獨立視窗 App
+              安裝為獨立視窗 App
             </Button>
           )}
 
@@ -380,8 +389,8 @@ export const Settings: React.FC = () => {
             rel="noopener noreferrer"
             style={{ textDecoration: 'none' }}
           >
-            <Button variant="secondary" size="sm" icon={<Laptop size={16} />}>
-              下載電腦版安裝檔 (.exe)
+            <Button variant="secondary" size="sm" icon={<Laptop size={14} strokeWidth={1.5} />}>
+              下載電腦版 (.exe)
             </Button>
           </a>
 
@@ -391,45 +400,46 @@ export const Settings: React.FC = () => {
             rel="noopener noreferrer"
             style={{ textDecoration: 'none' }}
           >
-            <Button variant="secondary" size="sm" icon={<Smartphone size={16} />}>
-              下載手機版安裝檔 (.apk)
+            <Button variant="secondary" size="sm" icon={<Smartphone size={14} strokeWidth={1.5} />}>
+              下載手機版 (.apk)
             </Button>
           </a>
 
           {lastCheckedAt && (
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
-              上次檢查：{new Date(lastCheckedAt).toLocaleTimeString()}
+            <span className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+              上次檢查 {new Date(lastCheckedAt).toLocaleTimeString()}
             </span>
           )}
         </div>
       </Card>
 
       {/* 1. 帳戶管理區塊 */}
-      <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <User size={18} color="var(--primary)" /> 個人帳戶狀態
+      <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+          <User size={16} strokeWidth={1.5} color="var(--text-secondary)" /> 個人帳戶狀態
         </h3>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '46px',
-                height: '46px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: 'var(--primary)',
-                color: '#ffffff',
+                width: '40px',
+                height: '40px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                color: 'var(--accent-text)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: '18px'
+                fontWeight: 600,
+                fontSize: '16px'
               }}
             >
               {user?.displayName ? user.displayName.slice(0, 1) : 'U'}
             </div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
+              <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                 {user?.displayName || '使用者'}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -445,7 +455,7 @@ export const Settings: React.FC = () => {
                 size="sm"
                 onClick={handleUpgradeAccount}
                 loading={upgrading}
-                icon={<ShieldCheck size={16} />}
+                icon={<ShieldCheck size={14} strokeWidth={1.5} />}
               >
                 升級綁定 Google
               </Button>
@@ -457,7 +467,7 @@ export const Settings: React.FC = () => {
                 clearAIConfig();
                 logout();
               }}
-              icon={<LogOut size={16} />}
+              icon={<LogOut size={14} strokeWidth={1.5} />}
             >
               登出
             </Button>
@@ -467,22 +477,21 @@ export const Settings: React.FC = () => {
 
       {/* 2. AI API Key 與自由模型選擇設定 (BYOK) */}
       <Card
-        glass
         padding="lg"
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
-          border: aiConfig.isKeyValid ? '1px solid var(--income)' : '1px solid var(--warning)'
+          borderColor: aiConfig.isKeyValid ? 'rgba(76, 195, 138, 0.3)' : 'rgba(245, 158, 11, 0.3)'
         }}
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <KeyRound size={18} color="var(--purple)" /> 個人 AI 金鑰與模型自由選擇 (BYOK)
+            <h3 style={{ fontSize: '15px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+              <KeyRound size={16} strokeWidth={1.5} color="var(--accent-text)" /> 個人 AI 金鑰與模型設定 (BYOK)
             </h3>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px', lineHeight: 1.5 }}>
-              為保障資安與防止盜用額度，系統<strong>絕不預設任何 API Key</strong>。請輸入您自己的 API Key，驗證成功後即可自由選擇該模型商提供的任何模型。
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', lineHeight: 1.5 }}>
+              系統不預設任何 API Key。輸入個人 API Key 驗證後即可自由選擇該供應商的所有模型。
             </p>
           </div>
 
@@ -492,22 +501,22 @@ export const Settings: React.FC = () => {
             rel="noopener noreferrer"
             style={{
               fontSize: '12px',
-              color: 'var(--primary-light)',
+              color: 'var(--accent-text)',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
               textDecoration: 'none',
-              fontWeight: 600
+              fontWeight: 500
             }}
           >
-            取得 {currentProviderMeta.shortName} 金鑰 <ExternalLink size={13} />
+            取得 {currentProviderMeta.shortName} 金鑰 <ExternalLink size={12} strokeWidth={1.5} />
           </a>
         </div>
 
         {/* 步驟 1：選擇模型供應商 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-            1. 選擇模型供應商 (支援貼上金鑰自動識別)
+          <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            1. 選擇模型供應商（貼上金鑰自動識別）
           </label>
           <select
             value={providerInput}
@@ -518,13 +527,13 @@ export const Settings: React.FC = () => {
             }}
             style={{
               width: '100%',
-              padding: '10px 12px',
+              padding: '8px 12px',
               borderRadius: 'var(--radius-md)',
               backgroundColor: 'var(--bg-tertiary)',
               border: '1px solid var(--border)',
               color: 'var(--text-primary)',
               fontSize: '13px',
-              fontWeight: 600,
+              fontWeight: 500,
               outline: 'none'
             }}
           >
@@ -539,13 +548,13 @@ export const Settings: React.FC = () => {
         {/* 步驟 2：輸入 API Key 並驗證 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              2. 輸入您的 {currentProviderMeta.shortName} API Key
+            <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+              2. 輸入 {currentProviderMeta.shortName} API Key
             </label>
-            <span style={{ fontSize: '11px', color: aiConfig.isKeyValid ? 'var(--income)' : 'var(--warning)', fontWeight: 700 }}>
+            <span className="font-mono" style={{ fontSize: '11px', color: aiConfig.isKeyValid ? 'var(--income)' : 'var(--warning)', fontWeight: 500 }}>
               {aiConfig.isKeyValid
-                ? `✅ 已驗證生效 (${aiConfig.availableModels.length} 個可用模型)`
-                : '⚠️ 尚未設定有效金鑰'}
+                ? `已驗證 (${aiConfig.availableModels.length} 個模型)`
+                : '尚未設定有效金鑰'}
             </span>
           </div>
 
@@ -560,13 +569,14 @@ export const Settings: React.FC = () => {
                 spellCheck={false}
                 style={{
                   width: '100%',
-                  padding: '10px 38px 10px 12px',
+                  padding: '8px 36px 8px 12px',
+                  minHeight: '36px',
                   borderRadius: 'var(--radius-md)',
                   backgroundColor: 'var(--bg-tertiary)',
                   border: '1px solid var(--border)',
                   color: 'var(--text-primary)',
                   fontSize: '13px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   outline: 'none'
                 }}
               />
@@ -586,29 +596,29 @@ export const Settings: React.FC = () => {
                   padding: 0
                 }}
               >
-                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showApiKey ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
               </button>
             </div>
 
             <Button
               variant="primary"
-              size="sm"
+              size="md"
               onClick={handleValidateAndLoadModels}
               loading={validatingKey}
               disabled={!apiKeyInput.trim()}
-              icon={<Sparkles size={15} />}
+              icon={<KeyRound size={14} strokeWidth={1.5} />}
             >
-              驗證金鑰並載入模型
+              驗證並載入模型
             </Button>
 
             {(apiKeyInput || aiConfig.apiKey) && (
               <Button
                 variant="outline"
-                size="sm"
+                size="md"
                 onClick={handleClearApiKey}
-                icon={<Trash2 size={15} />}
+                icon={<Trash2 size={14} strokeWidth={1.5} />}
               >
-                清除金鑰
+                清除
               </Button>
             )}
           </div>
@@ -619,7 +629,7 @@ export const Settings: React.FC = () => {
                 marginTop: '4px',
                 padding: '8px 12px',
                 borderRadius: 'var(--radius-sm)',
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                backgroundColor: 'var(--expense-subtle)',
                 color: 'var(--expense)',
                 fontSize: '12px',
                 display: 'flex',
@@ -627,13 +637,13 @@ export const Settings: React.FC = () => {
                 gap: '6px'
               }}
             >
-              <AlertCircle size={15} />
+              <AlertCircle size={15} strokeWidth={1.5} />
               <span>{keyError}</span>
             </div>
           )}
         </div>
 
-        {/* 步驟 3：自由選擇模型商提供的任何模型 */}
+        {/* 步驟 3：自由選擇模型 */}
         <div
           style={{
             display: 'flex',
@@ -646,9 +656,9 @@ export const Settings: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Cpu size={16} color="var(--purple)" />
-              3. 自由選擇 AI 模型
+            <label style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Cpu size={16} strokeWidth={1.5} color="var(--accent-text)" />
+              3. 選擇 AI 模型
             </label>
 
             {aiConfig.isKeyValid && (
@@ -657,15 +667,14 @@ export const Settings: React.FC = () => {
                   type="button"
                   onClick={() => setUseCustomModel((prev) => !prev)}
                   style={{
-                    fontSize: '11px',
-                    color: 'var(--primary-light)',
+                    fontSize: '12px',
+                    color: 'var(--accent-text)',
                     background: 'none',
                     border: 'none',
-                    cursor: 'pointer',
-                    textDecoration: 'underline'
+                    cursor: 'pointer'
                   }}
                 >
-                  {useCustomModel ? '返回下拉選單列表' : '手動輸入自訂模型代碼'}
+                  {useCustomModel ? '返回列表' : '手動輸入模型代碼'}
                 </button>
               </div>
             )}
@@ -675,18 +684,18 @@ export const Settings: React.FC = () => {
             <>
               {!useCustomModel ? (
                 <>
-                  {/* 模型關鍵字搜尋框（當模型數量較多時方便快速過濾） */}
                   {aiConfig.availableModels.length > 6 && (
                     <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                       <Search
                         size={14}
+                        strokeWidth={1.5}
                         style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)', pointerEvents: 'none' }}
                       />
                       <input
                         type="text"
                         value={modelSearch}
                         onChange={(e) => setModelSearch(e.target.value)}
-                        placeholder={`在 ${aiConfig.availableModels.length} 個模型中搜尋 (例如：2.5、flash、pro、claude、gpt)...`}
+                        placeholder={`搜尋 ${aiConfig.availableModels.length} 個可用模型`}
                         style={{
                           width: '100%',
                           padding: '8px 10px 8px 32px',
@@ -701,23 +710,23 @@ export const Settings: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 模型選擇下拉選單 */}
                   <select
                     value={aiConfig.selectedModel}
                     onChange={(e) => {
                       const nextModel = e.target.value;
                       setAIConfig({ selectedModel: nextModel });
-                      addToast({ type: 'success', message: `🤖 已切換模型為：${nextModel}` });
+                      addToast({ type: 'success', message: `已切換模型為：${nextModel}` });
                     }}
+                    className="font-mono"
                     style={{
                       width: '100%',
-                      padding: '10px 12px',
+                      padding: '8px 12px',
                       borderRadius: 'var(--radius-md)',
                       backgroundColor: 'var(--bg-secondary)',
-                      border: '1px solid var(--purple)',
+                      border: '1px solid var(--border-focus)',
                       color: 'var(--text-primary)',
                       fontSize: '13px',
-                      fontWeight: 700,
+                      fontWeight: 500,
                       outline: 'none',
                       cursor: 'pointer'
                     }}
@@ -731,7 +740,7 @@ export const Settings: React.FC = () => {
 
                   {filteredModels.length === 0 && (
                     <div style={{ fontSize: '12px', color: 'var(--warning)' }}>
-                      找不到符合「{modelSearch}」的模型，請清除搜尋關鍵字或切換為手動輸入模式。
+                      找不到符合「{modelSearch}」的模型，請清除關鍵字或改為手動輸入
                     </div>
                   )}
                 </>
@@ -741,22 +750,22 @@ export const Settings: React.FC = () => {
                     type="text"
                     value={customModelInput}
                     onChange={(e) => setCustomModelInput(e.target.value)}
-                    placeholder="輸入模型商提供的任意模型 ID (例如 gemini-2.5-pro)..."
+                    placeholder="輸入模型 ID，例如 gemini-2.5-pro"
                     style={{
                       flex: 1,
-                      padding: '9px 12px',
+                      padding: '8px 12px',
                       borderRadius: 'var(--radius-md)',
                       backgroundColor: 'var(--bg-secondary)',
                       border: '1px solid var(--border)',
                       color: 'var(--text-primary)',
                       fontSize: '13px',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       outline: 'none'
                     }}
                   />
                   <Button
                     variant="primary"
-                    size="sm"
+                    size="md"
                     disabled={!customModelInput.trim()}
                     onClick={() => {
                       const id = customModelInput.trim();
@@ -773,10 +782,10 @@ export const Settings: React.FC = () => {
                       });
                       setUseCustomModel(false);
                       setCustomModelInput('');
-                      addToast({ type: 'success', message: `🤖 已套用自訂模型：${id}` });
+                      addToast({ type: 'success', message: `已套用自訂模型：${id}` });
                     }}
                   >
-                    套用模型
+                    套用
                   </Button>
                 </div>
               )}
@@ -789,17 +798,17 @@ export const Settings: React.FC = () => {
                   gap: '4px',
                   fontSize: '12px',
                   color: 'var(--text-muted)',
-                  paddingTop: '4px',
+                  paddingTop: '6px',
                   borderTop: '1px solid var(--border)'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
                   <span>
-                    目前啟用模型：<strong className="font-mono" style={{ color: 'var(--purple)' }}>{aiConfig.selectedModel}</strong>
+                    目前啟用：<span className="font-mono" style={{ color: 'var(--accent-text)', fontWeight: 500 }}>{aiConfig.selectedModel}</span>
                   </span>
                   {selectedModelMeta?.inputTokenLimit && (
                     <span className="font-mono" style={{ fontSize: '11px' }}>
-                      Context 上限: {selectedModelMeta.inputTokenLimit.toLocaleString()} tokens
+                      Context {selectedModelMeta.inputTokenLimit.toLocaleString()} tokens
                     </span>
                   )}
                 </div>
@@ -811,23 +820,23 @@ export const Settings: React.FC = () => {
               </div>
             </>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '6px 0' }}>
-              <Lock size={15} />
-              <span>請先輸入有效的 API Key 並點擊「驗證金鑰並載入模型」，即可解鎖並自由選擇該模型商旗下的所有模型。</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', padding: '4px 0' }}>
+              <Lock size={14} strokeWidth={1.5} />
+              <span>驗證有效的 API Key 後即可選擇模型。</span>
             </div>
           )}
         </div>
       </Card>
 
       {/* 3. 後端 GAS 股市代理 & 個人 AI 連線診斷中心 */}
-      <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid var(--border-glass)' }}>
+      <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
           <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={18} color="var(--purple)" /> 後端 GAS 股市 & 個人 AI 連線診斷
+            <h3 style={{ fontSize: '15px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)' }}>
+              <Activity size={16} strokeWidth={1.5} color="var(--accent-text)" /> 後端 GAS 與 AI 連線診斷
             </h3>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              一鍵即時檢測 Yahoo Finance 股市報價代理與您個人設定的 AI 金鑰及模型解析狀態
+              即時檢測 Yahoo Finance 報價代理與個人 AI 金鑰解析狀態
             </p>
           </div>
 
@@ -836,97 +845,91 @@ export const Settings: React.FC = () => {
             size="sm"
             onClick={handleRunDiagnostics}
             loading={diagnosing}
-            icon={<Sparkles size={16} />}
+            icon={<Activity size={14} strokeWidth={1.5} />}
           >
-            ⚡ 立即進行完整診斷
+            執行完整診斷
           </Button>
         </div>
 
         {/* 診斷報告詳細卡片 */}
         {diagResult ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', backgroundColor: 'var(--bg-tertiary)', padding: '14px', borderRadius: 'var(--radius-md)', fontSize: '13px' }}>
-            {/* 1. GAS 伺服器連線 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <Server size={16} /> GAS 股市報價代理 (doPost)
+                <Server size={15} strokeWidth={1.5} /> GAS 股市報價代理
               </span>
-              <span style={{ color: diagResult.gasConnected ? 'var(--income)' : 'var(--expense)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {diagResult.gasConnected ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span className="font-mono" style={{ color: diagResult.gasConnected ? 'var(--income)' : 'var(--expense)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {diagResult.gasConnected ? <CheckCircle2 size={15} strokeWidth={1.5} /> : <AlertCircle size={15} strokeWidth={1.5} />}
                 {diagResult.gasConnected ? `已連線 (${diagResult.latencyMs}ms)` : '連線異常'}
               </span>
             </div>
 
-            {/* 2. 個人 AI API Key 與選擇模型 */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <Cpu size={16} /> 個人 AI 金鑰與模型 ({diagResult.aiProviderName})
+                <Cpu size={15} strokeWidth={1.5} /> AI 金鑰與模型 ({diagResult.aiProviderName})
               </span>
-              <span style={{ color: diagResult.hasGeminiKey ? 'var(--income)' : 'var(--warning)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {diagResult.hasGeminiKey ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+              <span className="font-mono" style={{ color: diagResult.hasGeminiKey ? 'var(--income)' : 'var(--warning)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {diagResult.hasGeminiKey ? <CheckCircle2 size={15} strokeWidth={1.5} /> : <AlertCircle size={15} strokeWidth={1.5} />}
                 {diagResult.hasGeminiKey
-                  ? `個人金鑰已生效 (${diagResult.geminiModel})`
-                  : '未設定個人 API Key (系統無預設金鑰)'}
+                  ? `生效 (${diagResult.geminiModel})`
+                  : '未設定個人 API Key'}
               </span>
             </div>
 
-            {/* 3. 股票即時報價測試 (2880 華南金) */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <TrendingUp size={16} /> 台股 2880 (華南金) Yahoo 報價測試
+                <TrendingUp size={15} strokeWidth={1.5} /> 台股 2880 (華南金) Yahoo 報價測試
               </span>
-              <span style={{ color: diagResult.testStock2880 && diagResult.testStock2880.currentPrice > 0 ? 'var(--income)' : 'var(--text-muted)', fontWeight: 700 }}>
+              <span className="font-mono" style={{ color: diagResult.testStock2880 && diagResult.testStock2880.currentPrice > 0 ? 'var(--income)' : 'var(--text-muted)', fontWeight: 500 }}>
                 {diagResult.testStock2880 && diagResult.testStock2880.currentPrice > 0
-                  ? `最新價 $${diagResult.testStock2880.currentPrice} (${diagResult.testStock2880.name})`
+                  ? `$${diagResult.testStock2880.currentPrice} (${diagResult.testStock2880.name})`
                   : '尚未取得報價'}
               </span>
             </div>
 
-            {/* 4. LLM 記帳解析回傳範例 */}
             {diagResult.testAIResult && diagResult.testAIResult.length > 0 && (
               <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                  🤖 {diagResult.geminiModel} 測試語句「麥當勞吃了 180 元」真實解析結果：
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  {diagResult.geminiModel} 測試語句「麥當勞吃了 180 元」解析結果：
                 </div>
-                <div className="font-mono" style={{ fontSize: '12px', color: 'var(--purple)', backgroundColor: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 'var(--radius-sm)' }}>
+                <div className="font-mono" style={{ fontSize: '12px', color: 'var(--accent-text)', backgroundColor: 'var(--bg-secondary)', padding: '8px 10px', borderRadius: 'var(--radius-sm)' }}>
                   分類: {diagResult.testAIResult[0].categoryName} | 金額: ${diagResult.testAIResult[0].amount} | 備註: {diagResult.testAIResult[0].note}
                 </div>
               </div>
             )}
 
-            {/* AI 診斷錯誤 */}
             {diagResult.aiError && (
-              <div style={{ marginTop: '6px', color: 'var(--expense)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: 'var(--radius-sm)', lineHeight: 1.6 }}>
-                ⚠️ <strong>AI 解析診斷提示</strong>：{diagResult.aiError}
+              <div style={{ marginTop: '6px', color: 'var(--expense)', backgroundColor: 'var(--expense-subtle)', padding: '10px', borderRadius: 'var(--radius-sm)', lineHeight: 1.6 }}>
+                <strong>AI 解析診斷提示</strong>：{diagResult.aiError}
               </div>
             )}
 
-            {/* GAS 錯誤說明與解決步驟 */}
             {diagResult.error && (
-              <div style={{ marginTop: '6px', color: 'var(--expense)', backgroundColor: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: 'var(--radius-sm)', lineHeight: 1.6 }}>
-                ⚠️ <strong>GAS 診斷提示</strong>：{diagResult.error}
+              <div style={{ marginTop: '6px', color: 'var(--expense)', backgroundColor: 'var(--expense-subtle)', padding: '10px', borderRadius: 'var(--radius-sm)', lineHeight: 1.6 }}>
+                <strong>GAS 診斷提示</strong>：{diagResult.error}
               </div>
             )}
           </div>
         ) : (
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            目前 GAS URL：<code className="font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>{GAS_URL ? GAS_URL.slice(0, 45) + '...' : '尚未設定'}</code>
+            GAS URL：<code className="font-mono" style={{ backgroundColor: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '4px' }}>{GAS_URL ? GAS_URL.slice(0, 45) + '...' : '尚未設定'}</code>
           </div>
         )}
       </Card>
 
-      {/* 4. 主題與介面偏好 */}
-      <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700 }}>
-          🎨 外觀與主題
+      {/* 4. 外觀、主題與股市漲跌慣例 */}
+      <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          外觀與色彩慣例
         </h3>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
               介面主題模式
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              目前使用：{theme === 'dark' ? '深色科技黑 (Dark)' : '簡約明亮白 (Light)'}
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              目前使用：{theme === 'dark' ? '深色石墨 (Dark)' : '暖紙帳冊 (Light)'}
             </div>
           </div>
 
@@ -934,30 +937,97 @@ export const Settings: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={toggleTheme}
-            icon={theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            icon={theme === 'dark' ? <Sun size={15} strokeWidth={1.5} /> : <Moon size={15} strokeWidth={1.5} />}
           >
             切換為 {theme === 'dark' ? '淺色模式' : '深色模式'}
           </Button>
         </div>
+
+        <div style={{ height: '1px', backgroundColor: 'var(--border)' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>股市漲跌與投資損益色彩</span>
+              <span className="font-mono" style={{ fontSize: '11px', color: 'var(--gain)', backgroundColor: 'var(--gain-subtle)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
+                漲/賺
+              </span>
+              <span className="font-mono" style={{ fontSize: '11px', color: 'var(--loss)', backgroundColor: 'var(--loss-subtle)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
+                跌/賠
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              {marketColorScheme === 'tw' ? '台股慣例：紅漲綠跌（上漲與獲利為紅）' : '國際慣例：綠漲紅跌（上漲與獲利為綠）'}
+            </div>
+          </div>
+
+          <div
+            style={{
+              display: 'flex',
+              backgroundColor: 'var(--bg-tertiary)',
+              padding: '4px',
+              borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)',
+              gap: '4px'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setMarketColorScheme('intl')}
+              style={{
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: marketColorScheme === 'intl' ? 'var(--primary)' : 'transparent',
+                color: marketColorScheme === 'intl' ? 'var(--on-primary)' : 'var(--text-secondary)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              綠漲紅跌
+            </button>
+            <button
+              type="button"
+              onClick={() => setMarketColorScheme('tw')}
+              style={{
+                padding: '4px 12px',
+                borderRadius: 'var(--radius-sm)',
+                border: 'none',
+                backgroundColor: marketColorScheme === 'tw' ? 'var(--primary)' : 'transparent',
+                color: marketColorScheme === 'tw' ? 'var(--on-primary)' : 'var(--text-secondary)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <ArrowUpDown size={12} strokeWidth={1.5} />
+              台股紅漲綠跌
+            </button>
+          </div>
+        </div>
       </Card>
 
       {/* 5. 資料備份與安全性 */}
-      <Card glass padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 700 }}>
-          💾 資料備份與安全性
+      <Card padding="lg" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
+          資料備份與匯出
         </h3>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
               完整財務數據匯出
             </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              包含帳戶、所有明細、分類、預算與持股資訊 (JSON 格式)
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              包含帳戶、收支明細、分類、預算與持股資訊 (JSON 格式)
             </div>
           </div>
 
-          <Button variant="secondary" size="sm" onClick={handleExportData} icon={<Download size={16} />}>
+          <Button variant="secondary" size="sm" onClick={handleExportData} icon={<Download size={15} strokeWidth={1.5} />}>
             匯出 JSON 備份
           </Button>
         </div>

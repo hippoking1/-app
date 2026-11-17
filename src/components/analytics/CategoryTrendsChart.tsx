@@ -55,6 +55,16 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
     return getCategoryMonthlyTrends(transactions, categories, selectedMonths);
   }, [transactions, categories, selectedMonths]);
 
+  // 統一圖表階層色票：第 1 大支出分類使用暖琥珀銅 Accent，其餘退為高區分度中性暖灰階
+  const seriesColors = useMemo(() => {
+    const palette = ['#f59e0b', '#a8a298', '#78716c', '#57534e', '#d6d3cd', '#44403c', '#827c72', '#b89f7d'];
+    const map = new Map<string, string>();
+    activeCategories.forEach((cat, idx) => {
+      map.set(cat.id, palette[idx % palette.length]);
+    });
+    return map;
+  }, [activeCategories]);
+
   // 分類顯示篩選：null 代表尚未手動設定（預設全選或前 5 大）
   const [selectedCatIds, setSelectedCatIds] = useState<string[] | null>(null);
 
@@ -115,12 +125,11 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
       <div
         style={{
           backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-glass)',
-          borderRadius: '12px',
-          padding: '12px 16px',
+          border: '1px solid var(--border-focus)',
+          borderRadius: 'var(--radius-md)',
+          padding: '12px 14px',
           boxShadow: 'var(--shadow-lg)',
-          minWidth: '220px',
-          backdropFilter: 'blur(16px)'
+          minWidth: '220px'
         }}
       >
         <div
@@ -228,16 +237,16 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
           <h3
             style={{
               fontSize: '16px',
-              fontWeight: 700,
+              fontWeight: 500,
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               color: 'var(--text-primary)'
             }}
           >
-            <TrendingUp size={18} color="var(--primary-light)" /> 各類支出趨勢折線圖
+            <TrendingUp size={16} strokeWidth={1.5} color="var(--accent-text)" /> 各類支出趨勢
           </h3>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+          <span className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             {rangeSummary}
           </span>
         </div>
@@ -248,8 +257,9 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
             style={{
               display: 'flex',
               backgroundColor: 'var(--bg-tertiary)',
-              padding: '3px',
+              padding: '4px',
               borderRadius: 'var(--radius-md)',
+              border: '1px solid var(--border)',
               gap: '2px'
             }}
           >
@@ -260,15 +270,15 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
                   key={preset.id}
                   onClick={() => setRangePreset(preset.id)}
                   style={{
-                    padding: '5px 10px',
+                    padding: '4px 10px',
                     fontSize: '12px',
-                    fontWeight: 600,
-                    color: isActive ? '#ffffff' : 'var(--text-secondary)',
+                    fontWeight: 500,
+                    color: isActive ? 'var(--on-primary)' : 'var(--text-secondary)',
                     backgroundColor: isActive ? 'var(--primary)' : 'transparent',
                     borderRadius: 'var(--radius-sm)',
                     border: 'none',
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease'
+                    transition: 'background-color 0.15s var(--ease-out), color 0.15s var(--ease-out)'
                   }}
                 >
                   {preset.label}
@@ -389,16 +399,16 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  backgroundColor: showTotalLine ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                  border: `1px solid ${showTotalLine ? 'var(--primary)' : 'var(--border)'}`,
+                  backgroundColor: showTotalLine ? 'var(--accent-subtle)' : 'transparent',
+                  border: `1px solid ${showTotalLine ? 'var(--accent)' : 'var(--border)'}`,
                   borderRadius: 'var(--radius-sm)',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  color: showTotalLine ? 'var(--primary-light)' : 'var(--text-secondary)',
+                  padding: '4px 8px',
+                  fontSize: '12px',
+                  color: showTotalLine ? 'var(--accent-text)' : 'var(--text-secondary)',
                   cursor: 'pointer'
                 }}
               >
-                <Activity size={12} /> 總支出參考線
+                <Activity size={12} strokeWidth={1.5} /> 總支出參考線
               </button>
             </div>
           </div>
@@ -415,6 +425,7 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
           >
             {activeCategories.map((cat) => {
               const isSelected = displayedCatIds.includes(cat.id);
+              const seriesColor = seriesColors.get(cat.id) || 'var(--text-secondary)';
               return (
                 <button
                   key={cat.id}
@@ -424,25 +435,24 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
                     alignItems: 'center',
                     gap: '6px',
                     padding: '4px 10px',
-                    borderRadius: 'var(--radius-full)',
+                    borderRadius: 'var(--radius-sm)',
                     fontSize: '12px',
-                    fontWeight: 600,
+                    fontWeight: isSelected ? 500 : 400,
                     cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.07)' : 'transparent',
-                    border: `1.5px solid ${isSelected ? cat.color : 'var(--border)'}`,
+                    transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out), opacity 0.15s var(--ease-out)',
+                    backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'transparent',
+                    border: `1px solid ${isSelected ? seriesColor : 'var(--border)'}`,
                     color: isSelected ? 'var(--text-primary)' : 'var(--text-muted)',
-                    opacity: isSelected ? 1 : 0.4
+                    opacity: isSelected ? 1 : 0.45
                   }}
                   title={`區間累計：${formatCurrency(cat.total)}`}
                 >
                   <span
                     style={{
-                      width: '8px',
-                      height: '8px',
+                      width: '6px',
+                      height: '6px',
                       borderRadius: '50%',
-                      backgroundColor: cat.color,
-                      boxShadow: isSelected ? `0 0 6px ${cat.color}` : 'none'
+                      backgroundColor: seriesColor
                     }}
                   />
                   <span>{cat.name}</span>
@@ -450,7 +460,7 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
                     className="font-mono"
                     style={{
                       fontSize: '11px',
-                      opacity: isSelected ? 0.85 : 0.6
+                      color: 'var(--text-muted)'
                     }}
                   >
                     {formatCurrency(cat.total)}
@@ -525,16 +535,17 @@ export const CategoryTrendsChart: React.FC<CategoryTrendsChartProps> = ({
               {/* 各分類支出折線 */}
               {activeCategories.map((cat) => {
                 if (!displayedCatIds.includes(cat.id)) return null;
+                const seriesColor = seriesColors.get(cat.id) || 'var(--accent)';
                 return (
                   <Line
                     key={cat.id}
                     type="monotone"
                     dataKey={cat.id}
                     name={cat.name}
-                    stroke={cat.color}
-                    strokeWidth={2.5}
-                    dot={{ r: 3, fill: cat.color }}
-                    activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 1.5 }}
+                    stroke={seriesColor}
+                    strokeWidth={2}
+                    dot={{ r: 2.5, fill: seriesColor }}
+                    activeDot={{ r: 5, stroke: 'var(--bg-secondary)', strokeWidth: 1.5 }}
                     isAnimationActive={true}
                   />
                 );

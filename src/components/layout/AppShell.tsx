@@ -12,8 +12,9 @@ import { calculateBudgetStatuses } from '@/utils/budget';
 import { AlertBanner } from '@/components/ui/AlertBanner';
 import { App as CapApp } from '@capacitor/app';
 import { CURRENT_VERSION, checkRemoteVersion, useVersionStore, applyAppUpdate } from '@/hooks/useVersionUpdater';
-import { Menu, Sparkles, RefreshCw, Sun, Moon } from 'lucide-react';
+import { Menu, RefreshCw, Sun, Moon } from 'lucide-react';
 import { hapticLight } from '@/utils/haptics';
+import { BrandMark } from '@/components/common/BrandMark';
 
 export const AppShell: React.FC = () => {
   const user = useAppStore((s) => s.user);
@@ -99,7 +100,7 @@ export const AppShell: React.FC = () => {
     } else {
       addToast({
         type: 'success',
-        message: `目前已是最新版本 (v${CURRENT_VERSION})！`
+        message: `目前已是最新版本 (v${CURRENT_VERSION})`
       });
     }
   };
@@ -119,10 +120,10 @@ export const AppShell: React.FC = () => {
         <div
           className="animate-spin"
           style={{
-            width: '32px',
-            height: '32px',
-            border: '3px solid var(--border)',
-            borderTopColor: 'var(--primary)',
+            width: '28px',
+            height: '28px',
+            border: '2px solid var(--border)',
+            borderTopColor: 'var(--accent)',
             borderRadius: '50%'
           }}
         />
@@ -136,21 +137,21 @@ export const AppShell: React.FC = () => {
 
   return (
     <div className="app-container">
-      {/* 桌面端固定顯示左側完整功能欄 Sidebar (預留對應寬度，Sidebar 本體採用 position: fixed 鎖定視窗) */}
+      {/* 桌面端固定顯示左側完整功能欄 Sidebar */}
       {isDesktop ? (
         <div
           className="sidebar-desktop-wrapper"
           style={{
             width: isSidebarCollapsed ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)',
             flexShrink: 0,
-            transition: 'width 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+            transition: 'width 0.25s var(--ease-out)'
           }}
         >
           <Sidebar />
         </div>
       ) : null}
 
-      {/* 行動端滑出式完整功能側邊欄抽屜 (Slide-over Full Sidebar Drawer) */}
+      {/* 行動端滑出式完整功能側邊欄抽屜 */}
       {!isDesktop && isMobileMenuOpen ? (
         <div
           style={{
@@ -160,15 +161,12 @@ export const AppShell: React.FC = () => {
             display: 'flex'
           }}
         >
-          {/* 半透明模糊背景遮罩 */}
           <div
             onClick={() => setMobileMenuOpen(false)}
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.65)',
-              backdropFilter: 'blur(4px)',
-              WebkitBackdropFilter: 'blur(4px)'
+              backgroundColor: 'var(--bg-overlay)'
             }}
           />
           <Sidebar isMobileDrawer onCloseMobile={() => setMobileMenuOpen(false)} />
@@ -177,7 +175,7 @@ export const AppShell: React.FC = () => {
 
       {/* 主內容展示區域 */}
       <div className="main-content">
-        {/* 行動端專屬頂部導覽列：單行俐落排版、不換行、唯一選單入口 */}
+        {/* 行動端頂部導覽列 */}
         {!isDesktop ? (
           <header
             style={{
@@ -185,9 +183,7 @@ export const AppShell: React.FC = () => {
               top: 0,
               zIndex: 45,
               paddingTop: 'var(--safe-top, max(env(safe-area-inset-top, 0px), 52px))',
-              backgroundColor: 'var(--bg-glass-heavy)',
-              backdropFilter: 'blur(18px)',
-              WebkitBackdropFilter: 'blur(18px)',
+              backgroundColor: 'var(--bg-deepest)',
               borderBottom: '1px solid var(--border)'
             }}
           >
@@ -196,27 +192,27 @@ export const AppShell: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                height: '52px',
-                padding: '0 14px',
+                height: '56px',
+                padding: '0 16px',
                 gap: '8px'
               }}
             >
-              {/* 左側：側邊欄選單按鈕 + 品牌標題與版本號 (強制單行不折行) */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+              {/* 左側：選單按鈕 + 品牌標誌 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                 <button
                   onClick={() => {
                     hapticLight();
                     setMobileMenuOpen(true);
                   }}
                   aria-label="開啟功能選單"
-                  title="開啟完整功能選單"
+                  title="開啟功能選單"
                   style={{
                     width: '36px',
                     height: '36px',
-                    background: 'var(--bg-tertiary)',
-                    border: '1px solid var(--border-focus)',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border)',
                     color: 'var(--text-primary)',
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 'var(--radius-md)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -225,38 +221,19 @@ export const AppShell: React.FC = () => {
                     touchAction: 'manipulation'
                   }}
                 >
-                  <Menu size={19} color="var(--primary)" />
+                  <Menu size={18} strokeWidth={1.5} />
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                  <div
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#ffffff',
-                      flexShrink: 0,
-                      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.35)'
-                    }}
-                  >
-                    <Sparkles size={15} />
-                  </div>
-                  <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.3px' }}>
+                  <BrandMark size={24} />
+                  <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>
                     智慧記帳
                   </span>
                   <span
                     className="font-mono"
                     style={{
                       fontSize: '11px',
-                      color: 'var(--text-muted)',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      padding: '2px 6px',
-                      borderRadius: '6px',
-                      border: '1px solid var(--border)'
+                      color: 'var(--text-muted)'
                     }}
                   >
                     v{CURRENT_VERSION}
@@ -264,7 +241,7 @@ export const AppShell: React.FC = () => {
                 </div>
               </div>
 
-              {/* 右側：精簡圖示按鈕（檢查更新、深淺主題切換） */}
+              {/* 右側：檢查更新、主題切換 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <button
                   onClick={handleQuickUpdateCheck}
@@ -272,23 +249,23 @@ export const AppShell: React.FC = () => {
                   title={hasUpdate ? `立即更新至 v${latestVersion}` : '檢查版本更新'}
                   style={{
                     height: '36px',
-                    padding: hasUpdate ? '0 10px' : '0 9px',
-                    background: hasUpdate ? 'var(--primary)' : 'var(--bg-tertiary)',
+                    padding: hasUpdate ? '0 12px' : '0 10px',
+                    backgroundColor: hasUpdate ? 'var(--accent)' : 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
-                    color: hasUpdate ? '#ffffff' : 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-sm)',
+                    color: hasUpdate ? 'var(--on-accent)' : 'var(--text-secondary)',
+                    borderRadius: 'var(--radius-md)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '5px',
+                    gap: '6px',
                     fontSize: '12px',
-                    fontWeight: 600,
+                    fontWeight: 500,
                     whiteSpace: 'nowrap',
                     cursor: 'pointer',
                     touchAction: 'manipulation'
                   }}
                 >
-                  <RefreshCw size={15} className={isCheckingVersion ? 'animate-spin' : ''} />
+                  <RefreshCw size={16} strokeWidth={1.5} className={isCheckingVersion ? 'animate-spin' : ''} />
                   {hasUpdate ? <span>更新 v{latestVersion}</span> : null}
                 </button>
 
@@ -299,10 +276,10 @@ export const AppShell: React.FC = () => {
                   style={{
                     width: '36px',
                     height: '36px',
-                    background: 'var(--bg-tertiary)',
+                    backgroundColor: 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
                     color: 'var(--text-secondary)',
-                    borderRadius: 'var(--radius-sm)',
+                    borderRadius: 'var(--radius-md)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -310,20 +287,20 @@ export const AppShell: React.FC = () => {
                     touchAction: 'manipulation'
                   }}
                 >
-                  {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                  {theme === 'dark' ? <Sun size={16} strokeWidth={1.5} /> : <Moon size={16} strokeWidth={1.5} />}
                 </button>
               </div>
             </div>
           </header>
         ) : null}
 
-        {/* 超支提醒橫幅 (可手動關閉，且只在首頁/預算頁) */}
+        {/* 超支提醒橫幅 */}
         {overBudgetAlerts.length > 0 && (
           <div style={{ padding: 'var(--space-4) var(--space-4) 0' }}>
             <AlertBanner
               type="error"
-              title="⚠️ 預算超支警示"
-              message={`本月共有 ${overBudgetAlerts.length} 項預算已超出上限（包含：${overBudgetAlerts.map((a) => a.category?.name || '總預算').join('、')}）`}
+              title="預算超支提醒"
+              message={`本月共有 ${overBudgetAlerts.length} 項預算超出上限（${overBudgetAlerts.map((a) => a.category?.name || '總預算').join('、')}）`}
               onClose={() => setIsAlertDismissed(true)}
             />
           </div>
@@ -332,7 +309,7 @@ export const AppShell: React.FC = () => {
         <Outlet />
       </div>
 
-      {/* 行動端底部對稱 5 欄導覽列 */}
+      {/* 行動端底部 5 欄導覽列 */}
       {!isDesktop ? (
         <div className="bottom-nav-mobile-wrapper">
           <BottomNav />
@@ -346,7 +323,7 @@ export const AppShell: React.FC = () => {
       <Modal
         isOpen={isTransactionModalOpen}
         onClose={() => setTransactionModalOpen(false)}
-        title="📝 快速記一筆"
+        title="快速記一筆"
       >
         <TransactionForm
           onSuccess={() => setTransactionModalOpen(false)}

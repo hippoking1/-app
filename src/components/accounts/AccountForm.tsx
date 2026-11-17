@@ -160,26 +160,26 @@ export const AccountForm: React.FC<AccountFormProps> = ({
           style={{
             padding: '12px',
             borderRadius: 'var(--radius-md)',
-            backgroundColor: 'rgba(16, 185, 129, 0.08)',
-            border: '1px solid rgba(16, 185, 129, 0.25)',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
             display: 'flex',
             flexDirection: 'column',
             gap: '8px'
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--income)' }}>
-              💵 本月已使用額度
+            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--income)' }}>
+              本月已使用額度
             </span>
-            <span className="font-mono" style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>
+            <span className="font-mono" style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
               ${cashUsage ? cashUsage.currentMonthSpent.toLocaleString() : '0'}
             </span>
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            🗓️ 系統將在<strong>每月 1 號自動歸零重新計算</strong>本月現金已用額度。
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            系統將在每月 1 號自動歸零重新計算本月現金已用額度。
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5, borderTop: '1px dashed rgba(16, 185, 129, 0.2)', paddingTop: '6px' }}>
-            💡 <strong>純已用額度模式：</strong>當「目前帳戶餘額」設為 <strong>0</strong> 時，系統預設<strong>不扣減餘額</strong>，只記錄每月已使用額度（適合日常只記現金花費、不記錄領錢收入的使用者）。
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, borderTop: '1px solid var(--border)', paddingTop: '8px' }}>
+            純已用額度模式：當帳戶餘額設為 0 時，不扣減餘額，僅記錄每月已用額度。
           </div>
         </div>
       )}
@@ -265,9 +265,9 @@ export const AccountForm: React.FC<AccountFormProps> = ({
               ))}
             </select>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              🗓️ 系統預設在<strong>結帳日後自動將已用額度歸零重新計算</strong>下一期。
+              系統預設在結帳日後自動將已用額度歸零並計算下一期。
               {cardCycleInfo && (
-                <div style={{ color: 'var(--primary-light)', marginTop: '2px', fontWeight: 600 }}>
+                <div className="font-mono" style={{ color: 'var(--accent-text)', marginTop: '4px', fontWeight: 500 }}>
                   當前帳單週期：{cardCycleInfo.cycleStartDate} ~ {cardCycleInfo.cycleEndDate}
                   {cardCycleInfo.daysRemaining === 0 ? '（今日結帳）' : `（剩 ${cardCycleInfo.daysRemaining} 天結帳）`}
                 </div>
@@ -299,14 +299,13 @@ export const AccountForm: React.FC<AccountFormProps> = ({
               type="button"
               onClick={() => setColor(c)}
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--radius-full)',
+                width: '28px',
+                height: '28px',
+                borderRadius: 'var(--radius-md)',
                 backgroundColor: c,
-                border: color === c ? '3px solid #ffffff' : 'none',
+                border: color === c ? '2px solid var(--text-primary)' : '1px solid var(--border)',
                 cursor: 'pointer',
-                boxShadow: color === c ? '0 0 10px ' + c : 'none',
-                transition: 'transform 0.15s'
+                transition: 'transform 0.12s var(--ease-out)'
               }}
             />
           ))}

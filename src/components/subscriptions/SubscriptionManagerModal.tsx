@@ -176,15 +176,15 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="💳 信用卡訂閱服務管理">
+    <Modal isOpen={isOpen} onClose={onClose} title="信用卡訂閱服務管理">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {/* 頂部總結看板 */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(168, 85, 247, 0.15) 100%)',
-            border: '1px solid rgba(99, 102, 241, 0.25)',
+            backgroundColor: 'var(--bg-tertiary)',
+            border: '1px solid var(--border)',
             borderRadius: 'var(--radius-lg)',
-            padding: '14px 16px',
+            padding: '16px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -193,11 +193,11 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
           }}
         >
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
               進行中信用卡訂閱
             </div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' }}>
-              <span className="font-mono" style={{ fontSize: '26px', fontWeight: 900, color: 'var(--primary-light)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '4px' }}>
+              <span className="font-mono" style={{ fontSize: '24px', fontWeight: 500, color: 'var(--accent-text)' }}>
                 {activeSubs.length}
               </span>
               <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>項服務</span>
@@ -205,20 +205,20 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>
-              每月平均固定訂閱支出
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 500 }}>
+              每月平均固定支出
             </div>
             <div
               className="font-mono"
               style={{
                 fontSize: '22px',
-                fontWeight: 900,
+                fontWeight: 500,
                 color: 'var(--expense)',
-                marginTop: '2px'
+                marginTop: '4px'
               }}
             >
               {formatCurrency(monthlyTotal)}
-              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginLeft: '4px' }}>
+              <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)', marginLeft: '4px' }}>
                 / 月
               </span>
             </div>
@@ -228,8 +228,9 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
         {/* 說明橫幅 */}
         <div
           style={{
-            padding: '8px 12px',
-            backgroundColor: 'var(--bg-tertiary)',
+            padding: '10px 12px',
+            backgroundColor: 'var(--bg-primary)',
+            border: '1px solid var(--border)',
             borderRadius: 'var(--radius-md)',
             fontSize: '12px',
             color: 'var(--text-muted)',
@@ -239,9 +240,9 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
             gap: '8px'
           }}
         >
-          <Sparkles size={16} color="var(--primary-light)" style={{ flexShrink: 0 }} />
+          <CreditCard size={16} strokeWidth={1.5} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
           <span>
-            信用卡訂閱付款將於指定扣款日由系統<strong>自行紀錄支出</strong>並計入信用卡本期帳單；您可<strong>隨時取消訂閱</strong>以停止自動紀錄。
+            訂閱付款將於指定扣款日自動計入信用卡帳單，可隨時取消停止。
           </span>
         </div>
 
@@ -252,7 +253,8 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
               display: 'flex',
               backgroundColor: 'var(--bg-tertiary)',
               borderRadius: 'var(--radius-md)',
-              padding: '3px'
+              padding: '4px',
+              gap: '2px'
             }}
           >
             {[
@@ -265,15 +267,15 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
                 type="button"
                 onClick={() => setFilterTab(tab.key as any)}
                 style={{
-                  padding: '5px 12px',
+                  padding: '4px 10px',
                   borderRadius: 'var(--radius-sm)',
                   border: 'none',
                   backgroundColor: filterTab === tab.key ? 'var(--primary)' : 'transparent',
-                  color: filterTab === tab.key ? '#ffffff' : 'var(--text-secondary)',
+                  color: filterTab === tab.key ? 'var(--on-primary)' : 'var(--text-secondary)',
                   fontSize: '12px',
-                  fontWeight: 700,
+                  fontWeight: 500,
                   cursor: 'pointer',
-                  transition: 'all 0.15s'
+                  transition: 'background-color 0.15s var(--ease-out), color 0.15s var(--ease-out)'
                 }}
               >
                 {tab.label}
@@ -329,50 +331,51 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
                         width: '36px',
                         height: '36px',
                         borderRadius: 'var(--radius-md)',
-                        backgroundColor: cat ? `${cat.color}20` : 'rgba(99,102,241,0.15)',
-                        color: cat?.color || 'var(--primary)',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--text-secondary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         flexShrink: 0
                       }}
                     >
-                      <CatIcon size={18} />
+                      <CatIcon size={16} strokeWidth={1.5} />
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                           {sub.name}
                         </span>
                         {isActive ? (
                           <span
                             style={{
-                              fontSize: '10px',
-                              padding: '2px 6px',
-                              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                              color: '#10b981',
-                              borderRadius: 'var(--radius-full)',
-                              fontWeight: 700,
-                              display: 'flex',
+                              fontSize: '11px',
+                              padding: '1px 6px',
+                              backgroundColor: 'var(--income-subtle)',
+                              color: 'var(--income)',
+                              borderRadius: 'var(--radius-xs)',
+                              fontWeight: 500,
+                              display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '3px'
+                              gap: '4px'
                             }}
                           >
-                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10b981' }} />
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--income)' }} />
                             自動紀錄中
                           </span>
                         ) : (
                           <span
                             style={{
-                              fontSize: '10px',
-                              padding: '2px 6px',
-                              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                              fontSize: '11px',
+                              padding: '1px 6px',
+                              backgroundColor: 'var(--expense-subtle)',
                               color: 'var(--expense)',
-                              borderRadius: 'var(--radius-full)',
-                              fontWeight: 700
+                              borderRadius: 'var(--radius-xs)',
+                              fontWeight: 500
                             }}
                           >
-                            已取消訂閱 (已停止紀錄)
+                            已取消
                           </span>
                         )}
                       </div>
@@ -394,7 +397,7 @@ export const SubscriptionManagerModal: React.FC<SubscriptionManagerModalProps> =
 
                   {/* 金額與頻率 */}
                   <div style={{ textAlign: 'right' }}>
-                    <div className="font-mono" style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                    <div className="font-mono" style={{ fontSize: '16px', fontWeight: 500, color: 'var(--text-primary)' }}>
                       NT$ {sub.amount.toLocaleString()}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>

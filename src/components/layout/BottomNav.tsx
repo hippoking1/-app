@@ -52,10 +52,8 @@ export const BottomNav: React.FC = () => {
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'var(--bg-glass-heavy)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderTop: '1px solid var(--border-glass)',
+        backgroundColor: 'var(--bg-deepest)',
+        borderTop: '1px solid var(--border)',
         display: 'grid',
         gridTemplateColumns: 'repeat(5, 1fr)',
         alignItems: 'center',
@@ -64,7 +62,7 @@ export const BottomNav: React.FC = () => {
         zIndex: 50
       }}
     >
-      {/* 左側兩項：總覽、明細 */}
+      {/* 左側兩項 */}
       {leftItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -78,27 +76,27 @@ export const BottomNav: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: '48px',
-              gap: '3px',
+              gap: '4px',
               textDecoration: 'none',
-              color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+              color: isActive ? 'var(--accent-text)' : 'var(--text-muted)',
               fontSize: '12px',
-              fontWeight: isActive ? 700 : 500,
+              fontWeight: isActive ? 500 : 400,
               whiteSpace: 'nowrap',
-              transition: 'color 0.2s',
+              transition: 'color 0.15s var(--ease-out)',
               touchAction: 'manipulation'
             })}
           >
-            <Icon size={21} />
+            <Icon size={18} strokeWidth={1.5} />
             <span>{item.label}</span>
           </NavLink>
         );
       })}
 
-      {/* 正中央第 3 欄：FAB 記一筆（100% 絕對置中，點擊：快速記帳 / 長按：AI 記帳） */}
+      {/* 正中央第 3 欄：FAB 記一筆（點擊：快速記帳 / 長按：AI 記帳） */}
       <div
         style={{
           position: 'relative',
-          top: '-14px',
+          top: '-12px',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center'
@@ -113,28 +111,28 @@ export const BottomNav: React.FC = () => {
           aria-label="快速記一筆（長按開啟 AI 記帳）"
           title="點擊：快速記帳 / 長按：AI 記帳"
           style={{
-            width: '54px',
-            height: '54px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
-            border: '4px solid var(--bg-primary)',
-            color: '#ffffff',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
+            width: '48px',
+            height: '48px',
+            borderRadius: 'var(--radius-lg)',
+            backgroundColor: 'var(--accent)',
+            border: '2px solid var(--bg-primary)',
+            color: 'var(--on-accent)',
+            boxShadow: 'var(--shadow-md)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            transition: 'transform 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+            transition: 'transform 0.15s var(--ease-out), background-color 0.15s var(--ease-out)',
             touchAction: 'manipulation'
           }}
-          onPointerDown={(e) => (e.currentTarget.style.transform = 'scale(0.92)')}
+          onPointerDown={(e) => (e.currentTarget.style.transform = 'scale(0.95)')}
           onPointerUp={(e) => (e.currentTarget.style.transform = 'scale(1)')}
         >
-          <Plus size={28} strokeWidth={2.5} />
+          <Plus size={22} strokeWidth={2} />
         </button>
       </div>
 
-      {/* 右側兩項：股票、帳戶 */}
+      {/* 右側兩項 */}
       {rightItems.map((item) => {
         const Icon = item.icon;
         return (
@@ -148,17 +146,17 @@ export const BottomNav: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'center',
               minHeight: '48px',
-              gap: '3px',
+              gap: '4px',
               textDecoration: 'none',
-              color: isActive ? 'var(--primary)' : 'var(--text-muted)',
+              color: isActive ? 'var(--accent-text)' : 'var(--text-muted)',
               fontSize: '12px',
-              fontWeight: isActive ? 700 : 500,
+              fontWeight: isActive ? 500 : 400,
               whiteSpace: 'nowrap',
-              transition: 'color 0.2s',
+              transition: 'color 0.15s var(--ease-out)',
               touchAction: 'manipulation'
             })}
           >
-            <Icon size={21} />
+            <Icon size={18} strokeWidth={1.5} />
             <span>{item.label}</span>
           </NavLink>
         );

@@ -35,7 +35,6 @@ import {
   Banknote,
   CheckCircle2,
   Calendar,
-  Sparkles,
   ArrowRight,
   TrendingDown,
   Globe
@@ -253,8 +252,8 @@ export const Travel: React.FC = () => {
       addToast({
         type: 'success',
         message: nextStatus
-          ? `🟢 已啟動「${trip.name}」旅途中模式！快速記帳將自動套用 ${trip.currency} 與本旅程。`
-          : `已關閉旅途中模式。`
+          ? `已啟動「${trip.name}」旅途中模式，記帳將自動套用 ${trip.currency}`
+          : '已關閉旅途中模式'
       });
       hapticLight();
     } catch (err: any) {
@@ -322,48 +321,29 @@ export const Travel: React.FC = () => {
   const currentCurrencyInfo = currentTrip ? getCurrencyInfo(currentTrip.currency) : SUPPORTED_CURRENCIES[1];
 
   return (
-    <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: '960px' }}>
+    <div className="page-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: '1040px' }}>
       {/* 頂部標題與快速操作 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'rgba(59, 130, 246, 0.2)',
-                color: 'var(--primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Plane size={18} />
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: 900, color: 'var(--text-primary)' }}>
-              旅行記帳 & 即時匯率
-            </h1>
-          </div>
+          <h1 style={{ fontSize: '28px', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            旅行記帳與匯率
+          </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
-            即時外幣換算、海外刷卡手續費、現金 vs 信用卡拆解與旅程專案
+            外幣即時換算、海外刷卡手續費試算、現金與信用卡拆解
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Button variant="primary" size="sm" onClick={handleOpenNewTripModal} icon={<Plus size={16} />}>
+          <Button variant="primary" size="sm" onClick={handleOpenNewTripModal} icon={<Plus size={16} strokeWidth={1.5} />}>
             建立新旅程
           </Button>
         </div>
       </div>
 
-      {/* 1. 逛街隨身即時匯率換算機 (Quick FX Calculator - 現代雙幣兌換 UX) */}
+      {/* 1. 逛街隨身即時匯率換算機 */}
       <Card
-        glass
         padding="lg"
         style={{
-          border: '1px solid var(--border-focus)',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.05) 100%)',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px'
@@ -371,80 +351,68 @@ export const Travel: React.FC = () => {
       >
         {/* 卡片標題與最新匯率更新按鈕 */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '30px',
-                height: '30px',
+                width: '32px',
+                height: '32px',
                 borderRadius: 'var(--radius-md)',
-                backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                color: 'var(--primary-light)',
+                backgroundColor: 'var(--bg-tertiary)',
+                border: '1px solid var(--border)',
+                color: 'var(--accent-text)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <Calculator size={18} />
+              <Calculator size={16} strokeWidth={1.5} />
             </div>
             <div>
-              <span style={{ fontSize: '16px', fontWeight: 900, color: 'var(--text-primary)' }}>
-                逛街隨身即時匯率計算機
+              <span style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                隨身即時匯率計算機
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '8px' }}>
-                出國掃街換算神器
+              <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '8px' }}>
+                即時雙幣換算與刷卡手續費試算
               </span>
             </div>
           </div>
 
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="sm"
             onClick={handleRefreshCalcRate}
             disabled={isUpdatingCalcRate}
-            style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '5px 10px',
-              color: 'var(--text-secondary)',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              transition: 'all 0.15s'
-            }}
+            icon={<RefreshCw size={14} strokeWidth={1.5} className={isUpdatingCalcRate ? 'animate-spin' : ''} />}
           >
-            <RefreshCw size={12} className={isUpdatingCalcRate ? 'animate-spin' : ''} />
-            <span>更新最新匯率</span>
-          </button>
+            更新匯率
+          </Button>
         </div>
 
-        {/* 雙幣轉換卡片（上下流向：支付當地貨幣 ➔ 換算折合台幣） */}
+        {/* 雙幣轉換卡片 */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {/* 上卡：當地外幣輸入卡（水平膠囊無重疊結構） */}
+          {/* 上卡：當地外幣輸入卡 */}
           <div
             style={{
-              backgroundColor: 'var(--bg-secondary)',
+              backgroundColor: 'var(--bg-primary)',
               border: '1px solid var(--border)',
-              borderRadius: 'var(--radius-lg)',
+              borderRadius: 'var(--radius-md)',
               padding: '12px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px'
+              gap: '8px'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>
-                當地標價 (外幣支付)
+              <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)' }}>
+                當地標價（外幣支付）
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--primary-light)', fontWeight: 600 }}>
+              <span className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                 {calcCurrencyInfo.name} ({calcCurrencyInfo.symbol})
               </span>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {/* 幣別徽章膠囊 */}
               <div
                 style={{
                   display: 'flex',
@@ -452,33 +420,35 @@ export const Travel: React.FC = () => {
                   gap: '6px',
                   backgroundColor: 'var(--bg-tertiary)',
                   padding: '6px 12px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid var(--border-focus)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)',
                   flexShrink: 0
                 }}
               >
-                <span style={{ fontSize: '20px', lineHeight: 1 }}>{calcCurrencyInfo.flag}</span>
-                <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>
+                <span className="font-mono" style={{ fontSize: '13px', fontWeight: 500, color: 'var(--accent-text)' }}>
+                  {calcCurrencyInfo.symbol}
+                </span>
+                <span className="font-mono" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                   {calcCurrencyInfo.code}
                 </span>
               </div>
 
-              {/* 大字數字輸入框 (右對齊、無 absolute 遮擋，零重疊) */}
               <input
                 type="number"
                 inputMode="decimal"
                 step="any"
                 value={calcAmount}
                 onChange={(e) => setCalcAmount(e.target.value)}
-                placeholder="輸入當地標價金額..."
+                placeholder="輸入金額"
                 style={{
                   width: '100%',
                   backgroundColor: 'transparent',
                   border: 'none',
                   outline: 'none',
                   fontSize: '26px',
-                  fontWeight: 900,
+                  fontWeight: 500,
                   fontFamily: 'var(--font-mono)',
+                  fontVariantNumeric: 'tabular-nums',
                   color: 'var(--text-primary)',
                   textAlign: 'right',
                   padding: 0
@@ -489,18 +459,19 @@ export const Travel: React.FC = () => {
 
           {/* 中繼：匯率指示與微調列 */}
           <div
+            className="font-mono"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '4px 12px',
+              padding: '2px 8px',
               fontSize: '12px',
               color: 'var(--text-secondary)'
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ color: 'var(--primary-light)', fontWeight: 800 }}>⇄ 參考匯率：</span>
-              <span>1 {calcCurrency} ≈ </span>
+              <span style={{ color: 'var(--text-muted)' }}>參考匯率</span>
+              <span>1 {calcCurrency} ≈</span>
               {isCustomCalcRate ? (
                 <input
                   type="number"
@@ -508,21 +479,21 @@ export const Travel: React.FC = () => {
                   value={calcRate}
                   onChange={(e) => setCalcRate(parseFloat(e.target.value) || 0)}
                   style={{
-                    width: '75px',
-                    padding: '2px 5px',
-                    borderRadius: '4px',
+                    width: '76px',
+                    padding: '2px 6px',
+                    borderRadius: 'var(--radius-xs)',
                     backgroundColor: 'var(--bg-tertiary)',
-                    border: '1px solid var(--primary)',
+                    border: '1px solid var(--border-focus)',
                     color: 'var(--text-primary)',
                     fontSize: '12px',
-                    fontWeight: 700
+                    fontWeight: 500
                   }}
                   autoFocus
                 />
               ) : (
-                <strong style={{ color: 'var(--text-primary)', fontSize: '13px' }}>
+                <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 500 }}>
                   {formatExchangeRate(calcRate)}
-                </strong>
+                </span>
               )}
               <span>NT$</span>
             </div>
@@ -533,11 +504,10 @@ export const Travel: React.FC = () => {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: 'var(--primary-light)',
-                fontSize: '11px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                textDecoration: 'underline'
+                color: 'var(--accent-text)',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer'
               }}
             >
               {isCustomCalcRate ? '完成微調' : '微調匯率'}
@@ -547,52 +517,51 @@ export const Travel: React.FC = () => {
           {/* 下卡：折合台幣結果卡 */}
           <div
             style={{
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-primary)',
+              border: '1px solid var(--border-focus)',
+              borderRadius: 'var(--radius-md)',
               padding: '14px 16px',
               display: 'flex',
               flexDirection: 'column',
-              gap: '10px',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)'
+              gap: '12px'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)' }}>
-                即時折合台幣 (實付成本)
+              <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)' }}>
+                即時折合台幣（實付成本）
               </span>
-              <span style={{ fontSize: '11px', color: 'var(--income)', fontWeight: 700 }}>
-                新台幣 (TWD)
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                新台幣 TWD
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              {/* TWD 膠囊 */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  backgroundColor: 'var(--accent-subtle)',
                   padding: '6px 12px',
-                  borderRadius: 'var(--radius-md)',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-focus)',
                   flexShrink: 0
                 }}
               >
-                <span style={{ fontSize: '20px', lineHeight: 1 }}>🇹🇼</span>
-                <span style={{ fontSize: '15px', fontWeight: 900, color: 'var(--income)' }}>
+                <span className="font-mono" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accent-text)' }}>
+                  NT$
+                </span>
+                <span className="font-mono" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
                   TWD
                 </span>
               </div>
 
-              {/* 大字折算結果 */}
               <div
                 className="font-mono"
                 style={{
                   fontSize: '28px',
-                  fontWeight: 900,
-                  color: 'var(--income)',
+                  fontWeight: 500,
+                  color: 'var(--accent-text)',
                   textAlign: 'right'
                 }}
               >
@@ -609,18 +578,18 @@ export const Travel: React.FC = () => {
                 justifyContent: 'space-between',
                 padding: '8px 12px',
                 backgroundColor: 'var(--bg-tertiary)',
-                borderRadius: 'var(--radius-md)',
+                borderRadius: 'var(--radius-sm)',
                 fontSize: '12px',
                 cursor: 'pointer',
                 userSelect: 'none',
                 border: '1px solid var(--border)'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
-                <CreditCard size={14} color="var(--purple)" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                <CreditCard size={14} strokeWidth={1.5} color="var(--text-secondary)" />
                 <span>加計海外刷卡 1.5% 手續費</span>
                 {isCalcCardFee && calcConversion.feeTWD > 0 && (
-                  <span style={{ color: 'var(--expense)', fontWeight: 700 }}>
+                  <span className="font-mono" style={{ color: 'var(--expense)', fontWeight: 500 }}>
                     (+NT$ {calcConversion.feeTWD.toLocaleString()})
                   </span>
                 )}
@@ -630,13 +599,13 @@ export const Travel: React.FC = () => {
                 checked={isCalcCardFee}
                 onChange={(e) => setIsCalcCardFee(e.target.checked)}
                 onClick={(e) => e.stopPropagation()}
-                style={{ accentColor: 'var(--primary)', cursor: 'pointer', width: '15px', height: '15px' }}
+                style={{ accentColor: 'var(--accent)', cursor: 'pointer', width: '15px', height: '15px' }}
               />
             </div>
           </div>
         </div>
 
-        {/* 常用貨幣快捷列 (可快速切換外幣與自由增刪) */}
+        {/* 常用貨幣快捷列 */}
         <div>
           <CurrencySelector
             selectedCurrency={calcCurrency}
@@ -649,18 +618,18 @@ export const Travel: React.FC = () => {
         {/* 快速帶入記帳按鈕 */}
         <Button
           variant="primary"
-          size="md"
+          size="lg"
+          fullWidth
           onClick={handleUseCalcForTransaction}
-          icon={<Sparkles size={16} />}
-          style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 800 }}
+          icon={<Plus size={16} strokeWidth={1.5} />}
         >
-          ⚡ 直接將此金額帶入快速記帳
+          將此金額帶入記帳
         </Button>
       </Card>
 
       {/* 2. 旅程選擇切換標籤與「旅途中模式」開關 */}
       {trips.length > 0 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
               {trips.map((trip) => {
@@ -670,31 +639,31 @@ export const Travel: React.FC = () => {
                     key={trip.id}
                     onClick={() => setSelectedTripId(trip.id)}
                     style={{
-                      padding: '8px 14px',
+                      padding: '6px 12px',
                       borderRadius: 'var(--radius-md)',
-                      backgroundColor: isSelected ? 'var(--bg-secondary)' : 'var(--bg-tertiary)',
-                      border: isSelected ? '1px solid var(--primary)' : '1px solid var(--border)',
-                      color: isSelected ? 'var(--primary-light)' : 'var(--text-secondary)',
-                      fontWeight: isSelected ? 800 : 600,
+                      backgroundColor: isSelected ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
+                      border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+                      color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      fontWeight: isSelected ? 500 : 400,
                       fontSize: '13px',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
                       cursor: 'pointer',
                       whiteSpace: 'nowrap',
-                      transition: 'all 0.15s'
+                      transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)'
                     }}
                   >
-                    <span>✈️ {trip.name}</span>
-                    <span style={{ fontSize: '11px', opacity: 0.8 }}>({trip.currency})</span>
+                    <Plane size={14} strokeWidth={1.5} color={isSelected ? 'var(--accent-text)' : 'var(--text-muted)'} />
+                    <span>{trip.name}</span>
+                    <span className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({trip.currency})</span>
                     {trip.isActive && (
                       <span
                         style={{
-                          width: '7px',
-                          height: '7px',
+                          width: '6px',
+                          height: '6px',
                           borderRadius: '50%',
-                          backgroundColor: '#10b981',
-                          boxShadow: '0 0 6px #10b981'
+                          backgroundColor: 'var(--income)'
                         }}
                         title="目前進行中旅程"
                       />
@@ -707,40 +676,50 @@ export const Travel: React.FC = () => {
             {currentTrip && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Button
-                  variant={currentTrip.isActive ? 'success' : 'outline'}
+                  variant={currentTrip.isActive ? 'accent' : 'outline'}
                   size="sm"
                   onClick={() => handleToggleActiveTrip(currentTrip)}
-                  icon={<CheckCircle2 size={14} />}
+                  icon={<CheckCircle2 size={14} strokeWidth={1.5} />}
                 >
-                  {currentTrip.isActive ? '🟢 旅途中模式 (啟動中)' : '開啟旅途中模式'}
+                  {currentTrip.isActive ? '旅途中模式（啟動中）' : '開啟旅途中模式'}
                 </Button>
                 <button
                   onClick={() => handleOpenEditTripModal(currentTrip)}
                   style={{
-                    padding: '6px',
-                    borderRadius: 'var(--radius-sm)',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: 'var(--radius-md)',
                     backgroundColor: 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
                     color: 'var(--text-secondary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: 'pointer'
                   }}
                   title="編輯旅程"
+                  aria-label="編輯旅程"
                 >
-                  <Edit2 size={15} />
+                  <Edit2 size={15} strokeWidth={1.5} />
                 </button>
                 <button
                   onClick={() => handleDeleteTrip(currentTrip)}
                   style={{
-                    padding: '6px',
-                    borderRadius: 'var(--radius-sm)',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: 'var(--radius-md)',
                     backgroundColor: 'var(--bg-tertiary)',
                     border: '1px solid var(--border)',
                     color: 'var(--expense)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     cursor: 'pointer'
                   }}
                   title="刪除旅程"
+                  aria-label="刪除旅程"
                 >
-                  <Trash2 size={15} />
+                  <Trash2 size={15} strokeWidth={1.5} />
                 </button>
               </div>
             )}
@@ -748,72 +727,72 @@ export const Travel: React.FC = () => {
 
           {/* 3. 該旅程財務儀表板 (KPI 卡片) */}
           {currentTrip && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div className="grid-3">
                 {/* 1. 旅程總花費 (雙幣) */}
-                <Card glass padding="md">
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {currentTrip.name} • 總花費
+                <Card padding="md">
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
+                    {currentTrip.name} · 總花費
                   </div>
-                  <div className="font-mono" style={{ fontSize: '24px', fontWeight: 900, color: 'var(--expense)', marginTop: '4px' }}>
+                  <div className="font-mono" style={{ fontSize: '24px', fontWeight: 500, color: 'var(--expense)', marginTop: '6px' }}>
                     NT$ {tripTotalTWD.toLocaleString()}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: 600 }}>
+                  <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '6px', fontWeight: 500 }}>
                     {currentCurrencyInfo.symbol} {tripTotalForeign.toLocaleString()} {currentCurrencyInfo.code}
                   </div>
                 </Card>
 
                 {/* 2. 現鈔 vs 信用卡拆解 */}
-                <Card glass padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <Card padding="md" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
                     支付方式拆解
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', fontSize: '12px' }}>
+                  <div className="font-mono" style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px', fontSize: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--income)' }}>
-                        <Banknote size={14} /> 外幣現鈔：
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                        <Banknote size={14} strokeWidth={1.5} /> 外幣現鈔
                       </span>
-                      <strong style={{ color: 'var(--text-primary)' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
                         NT$ {cashTotalTWD.toLocaleString()} ({currentCurrencyInfo.symbol}{cashTotalForeign.toLocaleString()})
-                      </strong>
+                      </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--purple)' }}>
-                        <CreditCard size={14} /> 信用卡刷卡：
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+                        <CreditCard size={14} strokeWidth={1.5} /> 信用卡
                       </span>
-                      <strong style={{ color: 'var(--text-primary)' }}>
+                      <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
                         NT$ {cardTotalTWD.toLocaleString()} ({currentCurrencyInfo.symbol}{cardTotalForeign.toLocaleString()})
-                      </strong>
+                      </span>
                     </div>
                   </div>
                   {cardFeesTWD > 0 && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>
-                      (含海外交易手續費 NT$ {cardFeesTWD.toLocaleString()})
+                    <div className="font-mono" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'right' }}>
+                      含海外手續費 NT$ {cardFeesTWD.toLocaleString()}
                     </div>
                   )}
                 </Card>
 
                 {/* 3. 旅遊預算與進度 */}
-                <Card glass padding="md">
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+                <Card padding="md">
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
                     旅遊預算 (NT$)
                   </div>
                   {budgetTWD > 0 ? (
                     <>
-                      <div className="font-mono" style={{ fontSize: '22px', fontWeight: 900, color: budgetRemaining >= 0 ? 'var(--income)' : 'var(--expense)', marginTop: '4px' }}>
+                      <div className="font-mono" style={{ fontSize: '22px', fontWeight: 500, color: budgetRemaining >= 0 ? 'var(--income)' : 'var(--expense)', marginTop: '6px' }}>
                         {budgetRemaining >= 0 ? '剩餘 NT$ ' + budgetRemaining.toLocaleString() : '超支 NT$ ' + Math.abs(budgetRemaining).toLocaleString()}
                       </div>
                       <div style={{ marginTop: '8px' }}>
                         <ProgressBar value={Math.min(100, budgetRatio)} max={100} height={8} />
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                      <div className="font-mono" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
                         <span>已用 {budgetRatio.toFixed(1)}%</span>
-                        <span>總預算 NT$ {budgetTWD.toLocaleString()}</span>
+                        <span>預算 NT$ {budgetTWD.toLocaleString()}</span>
                       </div>
                     </>
                   ) : (
                     <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                      尚未設定本趟旅遊預算，可點擊上方編輯按鈕設定。
+                      尚未設定本趟旅遊預算
                     </div>
                   )}
                 </Card>
@@ -821,9 +800,9 @@ export const Travel: React.FC = () => {
 
               {/* 該旅程明細列表 */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    📝 「{currentTrip.name}」消費明細 ({tripTransactions.length} 筆)
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                    「{currentTrip.name}」消費明細 ({tripTransactions.length} 筆)
                   </h3>
                   <Button
                     variant="secondary"
@@ -832,7 +811,7 @@ export const Travel: React.FC = () => {
                       sessionStorage.setItem('draft_tx_merchant', `${currentTrip.name}消費`);
                       setTransactionModalOpen(true);
                     }}
-                    icon={<Plus size={14} />}
+                    icon={<Plus size={14} strokeWidth={1.5} />}
                   >
                     記一筆旅行花費
                   </Button>
@@ -851,8 +830,8 @@ export const Travel: React.FC = () => {
                   ))}
 
                   {tripTransactions.length === 0 && (
-                    <Card style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
-                      本趟旅程尚無記帳記錄，點擊上方按鈕開始記帳！
+                    <Card style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      本趟旅程尚無記帳記錄
                     </Card>
                   )}
                 </div>
@@ -862,30 +841,31 @@ export const Travel: React.FC = () => {
         </div>
       ) : (
         /* 尚未建立任何旅程時之引導卡片 */
-        <Card glass padding="lg" style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <Card padding="lg" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(99, 102, 241, 0.15)',
-              color: 'var(--primary)',
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
+              color: 'var(--accent-text)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px'
             }}
           >
-            <Plane size={28} />
+            <Plane size={22} strokeWidth={1.5} />
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
-            尚未建立任何旅行專案
+          <h2 style={{ fontSize: '18px', fontWeight: 500, color: 'var(--text-primary)' }}>
+            尚未建立旅行專案
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '440px', margin: '8px auto 20px', lineHeight: 1.6 }}>
-            建立您的第一趟旅程（如「東京 5 日遊」或「首爾自由行」），即可開啟「旅途中模式」，即時以外幣記帳並自動統計折合台幣與預算！
+            建立旅程專案（如「東京 5 日遊」）並開啟旅途中模式，即可自動套用當地幣別並獨立統計旅遊預算。
           </p>
-          <Button variant="primary" onClick={handleOpenNewTripModal} icon={<Plus size={16} />}>
-            立即建立旅程專案
+          <Button variant="primary" onClick={handleOpenNewTripModal} icon={<Plus size={16} strokeWidth={1.5} />}>
+            建立旅程專案
           </Button>
         </Card>
       )}
@@ -894,12 +874,12 @@ export const Travel: React.FC = () => {
       <Modal
         isOpen={isTripModalOpen}
         onClose={() => setIsTripModalOpen(false)}
-        title={editingTrip ? '✏️ 編輯旅程專案' : '✈️ 建立新旅行專案'}
+        title={editingTrip ? '編輯旅程專案' : '建立旅行專案'}
       >
         <form onSubmit={handleSaveTrip} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <Input
             label="旅程名稱"
-            placeholder="例如：2026 東京賞櫻行、曼谷放鬆之旅"
+            placeholder="例如：2026 東京賞櫻行"
             value={tripFormName}
             onChange={(e) => setTripFormName(e.target.value)}
             required
@@ -908,7 +888,7 @@ export const Travel: React.FC = () => {
 
           <Input
             label="目的地"
-            placeholder="例如：日本 東京、泰國 曼谷"
+            placeholder="例如：日本 東京"
             value={tripFormDestination}
             onChange={(e) => setTripFormDestination(e.target.value)}
           />
@@ -920,14 +900,14 @@ export const Travel: React.FC = () => {
               onChange={(e) => setTripFormCurrency(e.target.value)}
               options={SUPPORTED_CURRENCIES.filter((c) => c.code !== 'TWD').map((c) => ({
                 value: c.code,
-                label: `${c.flag} ${c.code} (${c.name})`
+                label: `${c.code} (${c.name})`
               }))}
             />
 
             <Input
               type="number"
               label="鎖定固定匯率 (選填)"
-              placeholder="未填則使用最新即時匯率"
+              placeholder="留空使用即時匯率"
               value={tripFormCustomRate}
               onChange={(e) => setTripFormCustomRate(e.target.value)}
             />
@@ -958,7 +938,6 @@ export const Travel: React.FC = () => {
             onChange={(e) => setTripFormBudget(e.target.value)}
           />
 
-          {/* 勾選項：排除日常每月預算 */}
           <div
             style={{
               display: 'flex',
@@ -975,14 +954,13 @@ export const Travel: React.FC = () => {
               id="tripFormExcludeBudget"
               checked={tripFormExcludeBudget}
               onChange={(e) => setTripFormExcludeBudget(e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              style={{ width: '16px', height: '16px', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <label htmlFor="tripFormExcludeBudget" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
-              <strong>排除於日常每月生活預算</strong> (強烈推薦：防止旅遊機票與大額花費把平常的餐飲預算表衝爆)
+              排除於日常每月生活預算（防止機票與旅遊花費影響日常預算統計）
             </label>
           </div>
 
-          {/* 勾選項：設為當前進行中旅程 */}
           <div
             style={{
               display: 'flex',
@@ -999,10 +977,10 @@ export const Travel: React.FC = () => {
               id="tripFormIsActive"
               checked={tripFormIsActive}
               onChange={(e) => setTripFormIsActive(e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+              style={{ width: '16px', height: '16px', accentColor: 'var(--accent)', cursor: 'pointer' }}
             />
             <label htmlFor="tripFormIsActive" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
-              <strong>設為當前進行中旅程 (旅途中模式)</strong> (快速記帳將自動預設此旅程與當地幣別)
+              設為當前進行中旅程（快速記帳自動預設此旅程與當地幣別）
             </label>
           </div>
 
@@ -1021,7 +999,7 @@ export const Travel: React.FC = () => {
       <Modal
         isOpen={Boolean(editingTx)}
         onClose={() => setEditingTx(null)}
-        title="✏️ 編輯交易明細"
+        title="編輯交易明細"
       >
         {editingTx && (
           <TransactionForm

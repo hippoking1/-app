@@ -114,17 +114,18 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
         />
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ fontSize: '13px', fontWeight: 800, color: type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
+          <span className="font-mono" style={{ fontSize: '13px', fontWeight: 500, color: type === 'expense' ? 'var(--expense)' : 'var(--income)' }}>
             {currencyInfo.symbol}
           </span>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="font-mono"
             style={{
               width: '90px',
               fontSize: '16px',
-              fontWeight: 800,
+              fontWeight: 500,
               color: type === 'expense' ? 'var(--expense)' : 'var(--income)',
               backgroundColor: 'var(--bg-tertiary)',
               border: '1px solid var(--border)',
@@ -140,21 +141,22 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
       {/* 外幣換算提示 */}
       {currency !== 'TWD' && parsedRawAmount > 0 && (
         <div
+          className="font-mono"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            fontSize: '11px',
+            fontSize: '12px',
             color: 'var(--text-muted)',
             backgroundColor: 'var(--bg-tertiary)',
-            padding: '4px 8px',
+            padding: '6px 10px',
             borderRadius: 'var(--radius-sm)'
           }}
         >
-          <span>{currencyInfo.flag} {currency} (匯率 {formatExchangeRate(rate)})</span>
+          <span>{currency} (匯率 {formatExchangeRate(rate)})</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>折合</span>
-            <strong style={{ color: 'var(--primary-light)', fontWeight: 700 }}>
+            <strong style={{ color: 'var(--accent-text)', fontWeight: 500 }}>
               NT$ {twdConversion.totalTWD.toLocaleString()}
             </strong>
           </div>
@@ -168,9 +170,9 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
           onChange={(e) => setCategoryId(e.target.value)}
           options={categories.map((c) => ({
             value: c.id,
-            label: `📁 ${c.name}`
+            label: c.name
           }))}
-          style={{ padding: '6px 10px', fontSize: '12px' }}
+          style={{ padding: '6px 28px 6px 10px', fontSize: '12px' }}
         />
 
         <Select
@@ -178,9 +180,9 @@ export const ParsedTransactionCard: React.FC<ParsedTransactionCardProps> = ({
           onChange={(e) => setAccountId(e.target.value)}
           options={accounts.map((a) => ({
             value: a.id,
-            label: `💳 ${a.name}`
+            label: a.name
           }))}
-          style={{ padding: '6px 10px', fontSize: '12px' }}
+          style={{ padding: '6px 28px 6px 10px', fontSize: '12px' }}
         />
       </div>
 

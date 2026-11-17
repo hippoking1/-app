@@ -83,10 +83,10 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
         options={[
-          { value: 'all', label: '📊 全月總預算 (日常支出，不含投資)' },
+          { value: 'all', label: '全月總預算 (日常支出，不含投資)' },
           ...budgetableCategories.map((c) => ({
             value: c.id,
-            label: `📁 ${c.name}`
+            label: c.name
           }))
         ]}
       />

@@ -20,32 +20,32 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
     switch (type) {
       case 'error':
         return {
-          bg: 'rgba(244, 63, 94, 0.12)',
-          border: 'rgba(244, 63, 94, 0.35)',
+          bg: 'var(--expense-subtle)',
+          border: 'rgba(229, 72, 77, 0.3)',
           text: 'var(--expense)',
-          icon: <AlertCircle size={18} color="var(--expense)" />
+          icon: <AlertCircle size={16} strokeWidth={1.5} color="var(--expense)" />
         };
       case 'warning':
         return {
-          bg: 'rgba(245, 158, 11, 0.12)',
-          border: 'rgba(245, 158, 11, 0.35)',
+          bg: 'var(--warning-subtle)',
+          border: 'rgba(245, 158, 11, 0.3)',
           text: 'var(--warning)',
-          icon: <AlertTriangle size={18} color="var(--warning)" />
+          icon: <AlertTriangle size={16} strokeWidth={1.5} color="var(--warning)" />
         };
       case 'success':
         return {
-          bg: 'rgba(16, 185, 129, 0.12)',
-          border: 'rgba(16, 185, 129, 0.35)',
+          bg: 'var(--income-subtle)',
+          border: 'rgba(76, 195, 138, 0.3)',
           text: 'var(--income)',
-          icon: <CheckCircle2 size={18} color="var(--income)" />
+          icon: <CheckCircle2 size={16} strokeWidth={1.5} color="var(--income)" />
         };
       case 'info':
       default:
         return {
-          bg: 'rgba(14, 165, 233, 0.12)',
-          border: 'rgba(14, 165, 233, 0.35)',
-          text: 'var(--info)',
-          icon: <Info size={18} color="var(--info)" />
+          bg: 'var(--bg-tertiary)',
+          border: 'var(--border-focus)',
+          text: 'var(--text-primary)',
+          icon: <Info size={16} strokeWidth={1.5} color="var(--text-secondary)" />
         };
     }
   };
@@ -70,7 +70,7 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center' }}>{style.icon}</div>
         <div>
           {title && (
-            <div style={{ fontSize: '13px', fontWeight: 700, color: style.text }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: style.text }}>
               {title}
             </div>
           )}

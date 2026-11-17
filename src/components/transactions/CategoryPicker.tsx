@@ -39,32 +39,33 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              padding: '10px 4px',
+              padding: '8px 4px',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: isSelected ? 'var(--primary-glow)' : 'var(--bg-tertiary)',
-              border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border)',
+              backgroundColor: isSelected ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
+              border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
               cursor: 'pointer',
-              transition: 'all 0.15s'
+              transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)'
             }}
           >
             <div
               style={{
                 width: '32px',
                 height: '32px',
-                borderRadius: 'var(--radius-full)',
-                backgroundColor: `${cat.color}25`,
-                color: cat.color,
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                color: isSelected ? 'var(--accent-text)' : 'var(--text-secondary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
               }}
             >
-              <IconComponent size={16} />
+              <IconComponent size={16} strokeWidth={1.5} />
             </div>
             <span
               style={{
-                fontSize: '11px',
-                fontWeight: isSelected ? 700 : 500,
+                fontSize: '12px',
+                fontWeight: isSelected ? 500 : 400,
                 color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',

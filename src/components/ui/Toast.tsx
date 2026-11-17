@@ -16,7 +16,7 @@ export const ToastContainer: React.FC = () => {
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: '8px',
         maxWidth: '380px',
         width: 'calc(100% - 40px)',
         pointerEvents: 'none'
@@ -25,12 +25,12 @@ export const ToastContainer: React.FC = () => {
       {toasts.map((toast) => {
         const getIcon = () => {
           switch (toast.type) {
-            case 'success': return <CheckCircle2 size={18} color="var(--income)" />;
-            case 'error': return <AlertCircle size={18} color="var(--expense)" />;
-            case 'warning': return <AlertTriangle size={18} color="var(--warning)" />;
+            case 'success': return <CheckCircle2 size={16} strokeWidth={1.5} color="var(--income)" />;
+            case 'error': return <AlertCircle size={16} strokeWidth={1.5} color="var(--expense)" />;
+            case 'warning': return <AlertTriangle size={16} strokeWidth={1.5} color="var(--warning)" />;
             case 'info':
             default:
-              return <Info size={18} color="var(--info)" />;
+              return <Info size={16} strokeWidth={1.5} color="var(--text-secondary)" />;
           }
         };
 
@@ -39,10 +39,8 @@ export const ToastContainer: React.FC = () => {
             key={toast.id}
             className="animate-slide-up"
             style={{
-              backgroundColor: 'var(--bg-glass-heavy)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid var(--border-glass)',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-focus)',
               borderRadius: 'var(--radius-lg)',
               padding: '12px 16px',
               boxShadow: 'var(--shadow-lg)',
@@ -57,7 +55,7 @@ export const ToastContainer: React.FC = () => {
               {getIcon()}
               <div>
                 {toast.title && (
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
                     {toast.title}
                   </div>
                 )}
@@ -75,13 +73,13 @@ export const ToastContainer: React.FC = () => {
                     removeToast(toast.id);
                   }}
                   style={{
-                    backgroundColor: 'var(--primary-glow)',
+                    backgroundColor: 'var(--accent-subtle)',
                     border: '1px solid var(--border-focus)',
-                    color: 'var(--primary-light)',
+                    color: 'var(--accent-text)',
                     borderRadius: 'var(--radius-sm)',
                     padding: '4px 8px',
                     fontSize: '12px',
-                    fontWeight: 700,
+                    fontWeight: 500,
                     cursor: 'pointer'
                   }}
                 >
@@ -100,7 +98,7 @@ export const ToastContainer: React.FC = () => {
                   alignItems: 'center'
                 }}
               >
-                <X size={16} />
+                <X size={16} strokeWidth={1.5} />
               </button>
             </div>
           </div>

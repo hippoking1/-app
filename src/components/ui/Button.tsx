@@ -2,7 +2,7 @@ import React from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
+  variant?: 'primary' | 'accent' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   icon?: React.ReactNode;
@@ -25,42 +25,47 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-          color: '#ffffff',
-          boxShadow: '0 4px 14px 0 rgba(99, 102, 241, 0.35)',
-          border: 'none'
+          backgroundColor: 'var(--primary)',
+          color: 'var(--on-primary)',
+          border: '1px solid transparent',
+          boxShadow: 'var(--highlight-top)'
+        };
+      case 'accent':
+        return {
+          backgroundColor: 'var(--accent)',
+          color: 'var(--on-accent)',
+          border: '1px solid transparent',
+          boxShadow: 'var(--highlight-top)'
         };
       case 'secondary':
         return {
-          background: 'var(--bg-tertiary)',
+          backgroundColor: 'var(--bg-tertiary)',
           color: 'var(--text-primary)',
           border: '1px solid var(--border)'
         };
       case 'outline':
         return {
-          background: 'transparent',
+          backgroundColor: 'transparent',
           color: 'var(--text-primary)',
-          border: '1px solid var(--border-glass)'
+          border: '1px solid var(--border)'
         };
       case 'danger':
         return {
-          background: 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)',
+          backgroundColor: 'var(--expense)',
           color: '#ffffff',
-          boxShadow: '0 4px 14px 0 rgba(244, 63, 94, 0.35)',
-          border: 'none'
+          border: '1px solid transparent'
         };
       case 'success':
         return {
-          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-          color: '#ffffff',
-          boxShadow: '0 4px 14px 0 rgba(16, 185, 129, 0.35)',
-          border: 'none'
+          backgroundColor: 'var(--income)',
+          color: '#151413',
+          border: '1px solid transparent'
         };
       case 'ghost':
         return {
-          background: 'transparent',
+          backgroundColor: 'transparent',
           color: 'var(--text-secondary)',
-          border: 'none'
+          border: '1px solid transparent'
         };
     }
   };
@@ -68,12 +73,12 @@ export const Button: React.FC<ButtonProps> = ({
   const getSizeStyles = (): React.CSSProperties => {
     switch (size) {
       case 'sm':
-        return { padding: '6px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)' };
+        return { height: '32px', padding: '0 12px', fontSize: '13px', borderRadius: 'var(--radius-md)' };
       case 'lg':
-        return { padding: '14px 24px', fontSize: '16px', borderRadius: 'var(--radius-lg)' };
+        return { height: '44px', padding: '0 20px', fontSize: '15px', borderRadius: 'var(--radius-md)' };
       case 'md':
       default:
-        return { padding: '10px 18px', fontSize: '14px', borderRadius: 'var(--radius-md)' };
+        return { height: '36px', padding: '0 16px', fontSize: '14px', borderRadius: 'var(--radius-md)' };
     }
   };
 
@@ -82,12 +87,13 @@ export const Button: React.FC<ButtonProps> = ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    fontWeight: 600,
+    fontWeight: 500,
     cursor: disabled || loading ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1,
-    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+    opacity: disabled ? 0.55 : 1,
+    transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out), opacity 0.15s var(--ease-out), transform 0.12s var(--ease-out)',
     width: fullWidth ? '100%' : 'auto',
     userSelect: 'none',
+    whiteSpace: 'nowrap',
     ...getVariantStyles(),
     ...getSizeStyles(),
     ...style
@@ -95,7 +101,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button disabled={disabled || loading} style={baseStyle} className={className} {...props}>
-      {loading ? <Loader2 size={16} className="animate-spin" /> : icon}
+      {loading ? <Loader2 size={16} strokeWidth={1.5} className="animate-spin" /> : icon}
       {children}
     </button>
   );

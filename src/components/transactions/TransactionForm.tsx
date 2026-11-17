@@ -507,7 +507,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           const label = t === 'expense' ? '支出' : t === 'income' ? '收入' : '轉帳';
           const activeColor = t === 'expense' ? 'var(--expense)' : t === 'income' ? 'var(--income)' : 'var(--info)';
 
-          return (
+              return (
             <button
               key={t}
               type="button"
@@ -517,15 +517,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               }}
               style={{
                 flex: 1,
-                padding: '8px 0',
+                padding: '6px 0',
                 border: 'none',
                 borderRadius: 'var(--radius-sm)',
                 backgroundColor: isActive ? activeColor : 'transparent',
                 color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                fontWeight: 700,
+                fontWeight: 500,
                 fontSize: '13px',
                 cursor: 'pointer',
-                transition: 'all 0.15s'
+                transition: 'background-color 0.15s var(--ease-out), color 0.15s var(--ease-out)'
               }}
             >
               {label}
@@ -571,7 +571,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 <option value="">無歸屬旅行專案</option>
                 {trips.map((t) => (
                   <option key={t.id} value={t.id}>
-                    ✈️ {t.name} ({t.currency})
+                    {t.name} ({t.currency})
                   </option>
                 ))}
               </select>
@@ -603,8 +603,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </span>
           )}
           {canUseSubscription && isSubscription && effectiveTWDAmount > 0 && (
-            <span style={{ fontSize: '12px', color: 'var(--purple)', fontWeight: 700 }}>
-              每期 NT$ {effectiveTWDAmount.toLocaleString()} • 每月 {billingCycleDay} 號扣款
+            <span className="font-mono" style={{ fontSize: '12px', color: 'var(--accent-text)', fontWeight: 500 }}>
+              每期 NT$ {effectiveTWDAmount.toLocaleString()} · 每月 {billingCycleDay} 號扣款
             </span>
           )}
         </div>
@@ -629,19 +629,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               padding: '6px 10px',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-focus)',
+              border: '1px solid var(--border)',
               flexShrink: 0
             }}
           >
-            <span style={{ fontSize: '16px', lineHeight: 1 }}>{activeCurrencyInfo.flag}</span>
             <span
+              className="font-mono"
               style={{
                 fontSize: '13px',
-                fontWeight: 800,
-                color: type === 'expense' ? 'var(--expense)' : type === 'income' ? 'var(--income)' : 'var(--info)'
+                fontWeight: 500,
+                color: type === 'expense' ? 'var(--expense)' : type === 'income' ? 'var(--income)' : 'var(--text-primary)'
               }}
             >
-              {activeCurrencyInfo.symbol} ({activeCurrencyInfo.code})
+              {activeCurrencyInfo.symbol} {activeCurrencyInfo.code}
             </span>
           </div>
 
@@ -661,8 +661,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               outline: 'none',
               color: 'var(--text-primary)',
               fontSize: '24px',
-              fontWeight: 800,
+              fontWeight: 500,
               fontFamily: 'var(--font-mono)',
+              fontVariantNumeric: 'tabular-nums',
               padding: '6px 0'
             }}
           />
@@ -769,8 +770,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CreditCard size={14} color="var(--purple)" />
-                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>海外刷卡手續費 (1.5%)</span>
+                  <CreditCard size={14} strokeWidth={1.5} color="var(--text-secondary)" />
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>海外刷卡手續費 (1.5%)</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -808,9 +809,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     {activeCurrencyInfo.symbol}{parsedAmount.toLocaleString()}
                   </span>
                   <ArrowRight size={12} color="var(--text-muted)" />
-                  <strong style={{ fontSize: '15px', color: type === 'expense' ? 'var(--expense)' : 'var(--income)', fontWeight: 800 }}>
+                  <span className="font-mono" style={{ fontSize: '15px', color: type === 'expense' ? 'var(--expense)' : 'var(--income)', fontWeight: 500 }}>
                     NT$ {effectiveTWDAmount.toLocaleString()}
-                  </strong>
+                  </span>
                 </div>
               </div>
             )}
@@ -838,28 +839,28 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         {appliedPattern && (
           <div
             style={{
-              marginTop: '6px',
-              padding: '6px 10px',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              border: '1px solid rgba(99, 102, 241, 0.25)',
-              borderRadius: 'var(--radius-sm)',
+              marginTop: '8px',
+              padding: '8px 12px',
+              backgroundColor: 'var(--accent-subtle)',
+              border: '1px solid var(--border-focus)',
+              borderRadius: 'var(--radius-md)',
               fontSize: '12px',
-              color: 'var(--primary-light)',
+              color: 'var(--text-primary)',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '8px'
             }}
           >
-            <Sparkles size={14} />
+            <Sparkles size={14} strokeWidth={1.5} color="var(--accent-text)" />
             <span>
-              已自動套用<strong>「{appliedPattern.merchant}」</strong>常用模式：
+              已套用「{appliedPattern.merchant}」常用模式：
               {appliedPattern.categoryName && (
-                <span style={{ color: appliedPattern.categoryColor || 'inherit', fontWeight: 700 }}>
+                <span style={{ color: 'var(--accent-text)', fontWeight: 500 }}>
                   {appliedPattern.categoryName}
                 </span>
               )}
-              {appliedPattern.categoryName && appliedPattern.accountName && ' • '}
-              {appliedPattern.accountName && <span style={{ fontWeight: 600 }}>{appliedPattern.accountName}</span>}
+              {appliedPattern.categoryName && appliedPattern.accountName && ' · '}
+              {appliedPattern.accountName && <span style={{ fontWeight: 500 }}>{appliedPattern.accountName}</span>}
             </span>
           </div>
         )}
@@ -918,10 +919,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         <div
           style={{
             padding: '12px 14px',
-            backgroundColor: isInstallment ? 'rgba(59, 130, 246, 0.08)' : 'var(--bg-tertiary)',
-            border: isInstallment ? '1px solid rgba(59, 130, 246, 0.35)' : '1px solid var(--border)',
+            backgroundColor: isInstallment ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
+            border: isInstallment ? '1px solid var(--border-focus)' : '1px solid var(--border)',
             borderRadius: 'var(--radius-md)',
-            transition: 'all 0.2s ease',
+            transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px'
@@ -929,12 +930,12 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <CreditCard size={18} color={isInstallment ? '#3b82f6' : 'var(--text-secondary)'} />
+              <CreditCard size={16} strokeWidth={1.5} color={isInstallment ? 'var(--accent-text)' : 'var(--text-secondary)'} />
               <div>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  💳 信用卡分期付款
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                  信用卡分期付款
                 </span>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   將此筆消費按月拆分為多期每期扣款
                 </div>
               </div>
@@ -949,27 +950,26 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 if (next) setIsSubscription(false);
               }}
               style={{
-                width: '42px',
-                height: '24px',
+                width: '40px',
+                height: '22px',
                 borderRadius: 'var(--radius-full)',
-                backgroundColor: isInstallment ? 'var(--primary)' : 'var(--border)',
+                backgroundColor: isInstallment ? 'var(--accent)' : 'var(--border)',
                 border: 'none',
                 position: 'relative',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
+                transition: 'background-color 0.15s var(--ease-out)'
               }}
             >
               <div
                 style={{
-                  width: '18px',
-                  height: '18px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: 'var(--radius-full)',
                   backgroundColor: '#ffffff',
                   position: 'absolute',
                   top: '3px',
                   left: isInstallment ? '21px' : '3px',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                  transition: 'left 0.15s var(--ease-out)'
                 }}
               />
             </button>
@@ -979,7 +979,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           {isInstallment && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                   選擇分期期數
                 </label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -995,11 +995,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                         flex: '1 1 50px',
                         padding: '6px 10px',
                         borderRadius: 'var(--radius-sm)',
-                        border: !isCustomPeriods && installmentPeriods === p ? '1px solid var(--primary)' : '1px solid var(--border)',
+                        border: !isCustomPeriods && installmentPeriods === p ? '1px solid var(--accent)' : '1px solid var(--border)',
                         backgroundColor: !isCustomPeriods && installmentPeriods === p ? 'var(--primary)' : 'var(--bg-secondary)',
-                        color: !isCustomPeriods && installmentPeriods === p ? '#ffffff' : 'var(--text-primary)',
+                        color: !isCustomPeriods && installmentPeriods === p ? 'var(--on-primary)' : 'var(--text-primary)',
                         fontSize: '12px',
-                        fontWeight: 700,
+                        fontWeight: 500,
                         cursor: 'pointer'
                       }}
                     >
@@ -1013,11 +1013,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       flex: '1 1 50px',
                       padding: '6px 10px',
                       borderRadius: 'var(--radius-sm)',
-                      border: isCustomPeriods ? '1px solid var(--primary)' : '1px solid var(--border)',
+                      border: isCustomPeriods ? '1px solid var(--accent)' : '1px solid var(--border)',
                       backgroundColor: isCustomPeriods ? 'var(--primary)' : 'var(--bg-secondary)',
-                      color: isCustomPeriods ? '#ffffff' : 'var(--text-primary)',
+                      color: isCustomPeriods ? 'var(--on-primary)' : 'var(--text-primary)',
                       fontSize: '12px',
-                      fontWeight: 700,
+                      fontWeight: 500,
                       cursor: 'pointer'
                     }}
                   >
@@ -1034,7 +1034,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       label="自訂期數 (2 ~ 60 期)"
                       value={String(installmentPeriods)}
                       onChange={(e) => setInstallmentPeriods(Math.max(2, Math.min(60, parseInt(e.target.value) || 2)))}
-                      placeholder="請輸入期數 (例如：5)"
+                      placeholder="例如：5"
                     />
                   </div>
                 )}
@@ -1051,27 +1051,27 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
-                    border: '1px dashed rgba(59, 130, 246, 0.3)'
+                    border: '1px solid var(--border)'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>消費總金額：</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>${parsedAmount.toLocaleString()}</strong>
+                    <span>消費總金額</span>
+                    <span className="font-mono" style={{ fontWeight: 500, color: 'var(--text-primary)' }}>${parsedAmount.toLocaleString()}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>每期應繳金額：</span>
-                    <strong style={{ color: 'var(--expense)', fontSize: '13px' }}>
+                    <span>每期應繳金額</span>
+                    <span className="font-mono" style={{ color: 'var(--expense)', fontWeight: 500 }}>
                       {remainder === 0
                         ? `$${basePeriodAmount.toLocaleString()} / 期 (共 ${activePeriods} 期)`
                         : `首期 $${firstPeriodAmount.toLocaleString()}，後續 $${basePeriodAmount.toLocaleString()} / 期`}
-                    </strong>
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px' }}>
-                    <span>分期起訖日：</span>
+                  <div className="font-mono" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px' }}>
+                    <span>分期起訖日</span>
                     <span>{date} 至 {endPeriodDate}</span>
                   </div>
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--primary-light)', lineHeight: 1.4 }}>
-                    ✨ 系統將自動為您依序建立 {activePeriods} 筆按月到期的每期扣款紀錄，隨結帳日自動納入當期帳單。
+                  <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    系統將依序建立 {activePeriods} 筆按月到期紀錄，隨結帳日納入當期帳單。
                   </div>
                 </div>
               )}
@@ -1085,10 +1085,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         <div
           style={{
             padding: '12px 14px',
-            backgroundColor: isSubscription ? 'rgba(168, 85, 247, 0.08)' : 'var(--bg-tertiary)',
-            border: isSubscription ? '1px solid rgba(168, 85, 247, 0.35)' : '1px solid var(--border)',
+            backgroundColor: isSubscription ? 'var(--accent-subtle)' : 'var(--bg-tertiary)',
+            border: isSubscription ? '1px solid var(--border-focus)' : '1px solid var(--border)',
             borderRadius: 'var(--radius-md)',
-            transition: 'all 0.2s ease',
+            transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px'
@@ -1096,13 +1096,13 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Repeat size={18} color={isSubscription ? 'var(--purple)' : 'var(--text-secondary)'} />
+              <Repeat size={16} strokeWidth={1.5} color={isSubscription ? 'var(--accent-text)' : 'var(--text-secondary)'} />
               <div>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                  🔁 信用卡定期訂閱付款
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                  信用卡定期訂閱付款
                 </span>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                  設定週期扣款，在指定時間自行紀錄並可隨時取消
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  設定週期扣款，在指定時間自動紀錄
                 </div>
               </div>
             </div>
@@ -1116,27 +1116,26 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 if (next) setIsInstallment(false);
               }}
               style={{
-                width: '42px',
-                height: '24px',
+                width: '40px',
+                height: '22px',
                 borderRadius: 'var(--radius-full)',
-                backgroundColor: isSubscription ? 'var(--purple)' : 'var(--border)',
+                backgroundColor: isSubscription ? 'var(--accent)' : 'var(--border)',
                 border: 'none',
                 position: 'relative',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
+                transition: 'background-color 0.15s var(--ease-out)'
               }}
             >
               <div
                 style={{
-                  width: '18px',
-                  height: '18px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: 'var(--radius-full)',
                   backgroundColor: '#ffffff',
                   position: 'absolute',
                   top: '3px',
                   left: isSubscription ? '21px' : '3px',
-                  transition: 'left 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                  transition: 'left 0.15s var(--ease-out)'
                 }}
               />
             </button>
@@ -1147,8 +1146,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '4px' }}>
               {/* 熱門訂閱範本快捷點選 */}
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  快速套用常見訂閱服務：
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  常見訂閱服務
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {POPULAR_SUBSCRIPTION_PRESETS.map((p) => (
@@ -1157,15 +1156,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                       type="button"
                       onClick={() => handleApplySubscriptionPreset(p)}
                       style={{
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        backgroundColor: merchant === p.name ? 'rgba(168, 85, 247, 0.2)' : 'var(--bg-secondary)',
-                        border: merchant === p.name ? '1px solid var(--purple)' : '1px solid var(--border)',
-                        color: merchant === p.name ? 'var(--purple)' : 'var(--text-secondary)',
-                        fontSize: '11px',
-                        fontWeight: 600,
+                        padding: '4px 8px',
+                        borderRadius: 'var(--radius-sm)',
+                        backgroundColor: merchant === p.name ? 'var(--accent-subtle)' : 'var(--bg-secondary)',
+                        border: merchant === p.name ? '1px solid var(--accent)' : '1px solid var(--border)',
+                        color: merchant === p.name ? 'var(--accent-text)' : 'var(--text-secondary)',
+                        fontSize: '12px',
+                        fontWeight: 500,
                         cursor: 'pointer',
-                        transition: 'all 0.15s'
+                        transition: 'background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out)'
                       }}
                     >
                       {p.name} (${p.defaultAmount})
@@ -1177,7 +1176,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               {/* 扣款週期與指定扣款日 */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
                     扣款週期
                   </label>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -1194,11 +1193,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                           flex: 1,
                           padding: '6px 0',
                           borderRadius: 'var(--radius-sm)',
-                          border: subscriptionPeriod === item.key ? '1px solid var(--purple)' : '1px solid var(--border)',
-                          backgroundColor: subscriptionPeriod === item.key ? 'var(--purple)' : 'var(--bg-secondary)',
-                          color: subscriptionPeriod === item.key ? '#ffffff' : 'var(--text-primary)',
+                          border: subscriptionPeriod === item.key ? '1px solid var(--accent)' : '1px solid var(--border)',
+                          backgroundColor: subscriptionPeriod === item.key ? 'var(--primary)' : 'var(--bg-secondary)',
+                          color: subscriptionPeriod === item.key ? 'var(--on-primary)' : 'var(--text-primary)',
                           fontSize: '12px',
-                          fontWeight: 700,
+                          fontWeight: 500,
                           cursor: 'pointer'
                         }}
                       >
@@ -1241,10 +1240,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                   id="recordFirstImmediately"
                   checked={recordFirstImmediately}
                   onChange={(e) => setRecordFirstImmediately(e.target.checked)}
-                  style={{ width: '16px', height: '16px', accentColor: 'var(--purple)', cursor: 'pointer' }}
+                  style={{ width: '16px', height: '16px', accentColor: 'var(--accent)', cursor: 'pointer' }}
                 />
                 <label htmlFor="recordFirstImmediately" style={{ cursor: 'pointer', color: 'var(--text-primary)' }}>
-                  立即記錄首期扣款 (日期為：<strong>{date}</strong>)
+                  立即記錄首期扣款（日期：{date}）
                 </label>
               </div>
 
@@ -1259,27 +1258,27 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
-                    border: '1px dashed rgba(168, 85, 247, 0.35)'
+                    border: '1px solid var(--border)'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>訂閱服務名稱：</span>
-                    <strong style={{ color: 'var(--text-primary)' }}>{merchant || note || '信用卡定期訂閱'}</strong>
+                    <span>訂閱服務名稱</span>
+                    <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{merchant || note || '信用卡定期訂閱'}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                    <span>每期扣款金額：</span>
-                    <strong style={{ color: 'var(--expense)', fontSize: '13px' }}>
+                    <span>每期扣款金額</span>
+                    <span className="font-mono" style={{ fontWeight: 500, color: 'var(--expense)' }}>
                       ${parsedAmount.toLocaleString()} / {subscriptionPeriod === 'yearly' ? '年' : subscriptionPeriod === 'weekly' ? '週' : '月'}
-                    </strong>
+                    </span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px' }}>
-                    <span>下次自動扣款日：</span>
-                    <span style={{ color: 'var(--purple)', fontWeight: 700 }}>
+                  <div className="font-mono" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '12px' }}>
+                    <span>下次自動扣款日</span>
+                    <span style={{ color: 'var(--accent-text)', fontWeight: 500 }}>
                       {recordFirstImmediately ? previewNextBilling : date} (每月 {billingCycleDay} 號)
                     </span>
                   </div>
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
-                    ✨ 系統將在指定時間於背景自行紀錄支出並自動計入信用卡帳單；您可以隨時在「訂閱管理」中暫停或取消訂閱以停止自動紀錄。
+                  <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    系統將在指定時間自動紀錄支出並納入信用卡帳單，隨時可在「訂閱管理」停止。
                   </div>
                 </div>
               )}

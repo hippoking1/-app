@@ -336,7 +336,7 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
       {/* 模式切換 Tab */}
-      <div style={{ display: 'flex', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '4px', gap: '2px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '4px', gap: '4px', flexWrap: 'wrap' }}>
         {!isExistingHolding ? (
           <button
             type="button"
@@ -346,20 +346,20 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
               border: 'none',
               borderRadius: 'var(--radius-sm)',
               backgroundColor: 'var(--primary)',
-              color: '#ffffff',
-              fontWeight: 700,
+              color: 'var(--on-primary)',
+              fontWeight: 500,
               fontSize: '13px',
               cursor: 'default'
             }}
           >
-            🎯 建立初始持倉 / 興櫃持股建檔
+            建立初始持倉 / 興櫃持股建檔
           </button>
         ) : (
           [
-            { key: 'buy', label: '📈 買進加碼', color: 'var(--income)' },
-            { key: 'sell', label: '📉 賣出減碼', color: 'var(--expense)' },
-            { key: 'dividend_cash', label: '💵 現金股利', color: '#10b981' },
-            { key: 'dividend_stock', label: '📜 股票股利', color: 'var(--purple)' }
+            { key: 'buy', label: '買進加碼', color: 'var(--gain)' },
+            { key: 'sell', label: '賣出減碼', color: 'var(--loss)' },
+            { key: 'dividend_cash', label: '現金股利', color: 'var(--accent)' },
+            { key: 'dividend_stock', label: '股票股利', color: 'var(--primary)' }
           ].map((item) => {
             const isActive = mode === item.key;
             return (
@@ -373,15 +373,15 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
                 style={{
                   flex: 1,
                   minWidth: '70px',
-                  padding: '7px 0',
+                  padding: '6px 0',
                   border: 'none',
                   borderRadius: 'var(--radius-sm)',
                   backgroundColor: isActive ? item.color : 'transparent',
-                  color: isActive ? '#ffffff' : 'var(--text-secondary)',
-                  fontWeight: 700,
+                  color: isActive ? '#151413' : 'var(--text-secondary)',
+                  fontWeight: 500,
                   fontSize: '12px',
                   cursor: 'pointer',
-                  transition: 'all 0.15s'
+                  transition: 'background-color 0.15s var(--ease-out), color 0.15s var(--ease-out)'
                 }}
               >
                 {item.label}
@@ -392,19 +392,19 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
       </div>
 
       {/* 股票基本資訊展示 (現有持股時標明持股) */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', backgroundColor: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
         <div>
-          <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
             {name} ({symbol})
           </span>
           {isExistingHolding && (
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              目前庫存：<strong>{existingShares.toLocaleString()} 股</strong> • 平均成本：<strong>${existingAvgCost}</strong>
+            <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              庫存 {existingShares.toLocaleString()} 股 · 均價 ${existingAvgCost}
             </div>
           )}
         </div>
-        <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--primary-light)' }}>
-          {market === 'TW' ? '🇹🇼 台股/興櫃' : '🇺🇸 美股'}
+        <span className="font-mono" style={{ fontSize: '11px', fontWeight: 500, padding: '2px 6px', borderRadius: 'var(--radius-xs)', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', color: 'var(--accent-text)' }}>
+          {market === 'TW' ? '台股/興櫃' : '美股'}
         </span>
       </div>
 
@@ -515,21 +515,21 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
           </div>
 
           {/* 除權稀釋預覽卡片 */}
-          <div style={{ backgroundColor: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', padding: '12px 14px', borderRadius: 'var(--radius-md)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ backgroundColor: 'var(--accent-subtle)', border: '1px solid var(--border-focus)', padding: '12px 14px', borderRadius: 'var(--radius-md)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-primary)' }}>
-              <span>除權後總持股數：</span>
-              <strong className="font-mono" style={{ fontSize: '14px', color: 'var(--purple)' }}>
-                {newSharesAfterStockDividend.toLocaleString()} 股 (+{numBonusShares}股)
-              </strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-              <span>除權後平均每股成本：</span>
-              <span className="font-mono" style={{ fontWeight: 700 }}>
-                ${existingAvgCost} ➔ <strong style={{ color: 'var(--income)' }}>${newAvgCostAfterStockDividend}</strong>
+              <span>除權後總持股數</span>
+              <span className="font-mono" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--accent-text)' }}>
+                {newSharesAfterStockDividend.toLocaleString()} 股 (+{numBonusShares})
               </span>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              💡 股票股利（配股）使持股增加，總投入本金不變，平均每股成本將自動除權稀釋。
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+              <span>除權後平均每股成本</span>
+              <span className="font-mono" style={{ fontWeight: 500 }}>
+                ${existingAvgCost} → <span style={{ color: 'var(--income)' }}>${newAvgCostAfterStockDividend}</span>
+              </span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              股票股利（配股）使持股增加，總投入本金不變，平均每股成本自動除權稀釋。
             </div>
           </div>
         </div>
@@ -549,8 +549,8 @@ export const StockTradeForm: React.FC<StockTradeFormProps> = ({
                   value={market}
                   onChange={(e) => setMarket(e.target.value as StockMarket)}
                   options={[
-                    { value: 'TW', label: '🇹🇼 台股/興櫃' },
-                    { value: 'US', label: '🇺🇸 美股市場' }
+                    { value: 'TW', label: '台股 / 興櫃' },
+                    { value: 'US', label: '美股市場' }
                   ]}
                 />
                 <Input

@@ -8,31 +8,27 @@ export const PageSkeleton: React.FC = () => {
         flexDirection: 'column',
         gap: '16px',
         width: '100%',
-        maxWidth: '1200px',
+        maxWidth: '1440px',
         margin: '0 auto',
-        padding: '16px',
-        animation: 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+        padding: '24px'
       }}
     >
-      {/* 標題骨架 */}
       <div
+        className="skeleton"
         style={{
           height: '32px',
           width: '200px',
-          borderRadius: '8px',
-          background: 'var(--surface, rgba(255, 255, 255, 0.06))'
+          borderRadius: 'var(--radius-sm)'
         }}
       />
-      {/* 卡片骨架 1 */}
       <div
+        className="skeleton"
         style={{
-          height: '140px',
+          height: '128px',
           width: '100%',
-          borderRadius: '16px',
-          background: 'var(--surface, rgba(255, 255, 255, 0.04))'
+          borderRadius: 'var(--radius-lg)'
         }}
       />
-      {/* 卡片骨架 2 */}
       <div
         style={{
           display: 'grid',
@@ -41,17 +37,17 @@ export const PageSkeleton: React.FC = () => {
         }}
       >
         <div
+          className="skeleton"
           style={{
             height: '200px',
-            borderRadius: '16px',
-            background: 'var(--surface, rgba(255, 255, 255, 0.04))'
+            borderRadius: 'var(--radius-lg)'
           }}
         />
         <div
+          className="skeleton"
           style={{
             height: '200px',
-            borderRadius: '16px',
-            background: 'var(--surface, rgba(255, 255, 255, 0.04))'
+            borderRadius: 'var(--radius-lg)'
           }}
         />
       </div>

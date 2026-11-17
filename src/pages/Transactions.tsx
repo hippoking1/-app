@@ -103,7 +103,7 @@ export const Transactions: React.FC = () => {
           >
             <ChevronLeft size={18} />
           </button>
-          <span style={{ fontSize: '18px', fontWeight: 800, minWidth: '90px', textAlign: 'center' }}>
+          <span className="font-mono" style={{ fontSize: '18px', fontWeight: 500, minWidth: '88px', textAlign: 'center' }}>
             {currentMonth}
           </span>
           <button
@@ -148,25 +148,25 @@ export const Transactions: React.FC = () => {
       <div className="grid-2">
         <Card padding="sm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>本期總支出</span>
-          <span className="font-mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--expense)' }}>
+          <span className="font-mono" style={{ fontSize: '18px', fontWeight: 500, color: 'var(--expense)' }}>
             -{formatCurrency(totalExpense)}
           </span>
         </Card>
         <Card padding="sm" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>本期總收入</span>
-          <span className="font-mono" style={{ fontSize: '18px', fontWeight: 800, color: 'var(--income)' }}>
+          <span className="font-mono" style={{ fontSize: '18px', fontWeight: 500, color: 'var(--income)' }}>
             +{formatCurrency(totalIncome)}
           </span>
         </Card>
       </div>
 
       {/* 搜尋與過濾條件工具列 */}
-      <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      <Card padding="md" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <Input
-          placeholder="搜尋備註關鍵字、標籤 (例如：全聯、聚餐、車資)..."
+          placeholder="搜尋商家、備註或標籤"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          icon={<Search size={16} />}
+          icon={<Search size={16} strokeWidth={1.5} />}
         />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
@@ -178,8 +178,8 @@ export const Transactions: React.FC = () => {
               { value: 'expense', label: '僅支出' },
               { value: 'income', label: '僅收入' },
               { value: 'transfer', label: '僅轉帳' },
-              { value: 'travel', label: '✈️ 僅外幣/旅行' },
-              { value: 'subscription', label: '🔁 僅訂閱扣款' }
+              { value: 'travel', label: '僅外幣 / 旅行' },
+              { value: 'subscription', label: '僅訂閱扣款' }
             ]}
           />
 
@@ -219,17 +219,17 @@ export const Transactions: React.FC = () => {
           }}
         >
           <span>
-            🔍 跨月份全域搜尋「<strong>{keyword}</strong>」：共找到 {filtered.length} 筆交易
+            跨月份全域搜尋「<strong style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{keyword}</strong>」：找到 {filtered.length} 筆交易
           </span>
           <button
             onClick={() => setKeyword('')}
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--primary)',
+              color: 'var(--accent-text)',
               cursor: 'pointer',
               fontSize: '12px',
-              fontWeight: 600
+              fontWeight: 500
             }}
           >
             清除搜尋
@@ -258,7 +258,7 @@ export const Transactions: React.FC = () => {
                 }}
               >
                 <span>{dateStr}</span>
-                <div style={{ display: 'flex', gap: '10px' }}>
+                <div className="font-mono" style={{ display: 'flex', gap: '12px' }}>
                   {dayExpense > 0 && <span style={{ color: 'var(--expense)' }}>支 {formatCurrency(dayExpense)}</span>}
                   {dayIncome > 0 && <span style={{ color: 'var(--income)' }}>收 {formatCurrency(dayIncome)}</span>}
                 </div>
@@ -290,7 +290,7 @@ export const Transactions: React.FC = () => {
       <Modal
         isOpen={Boolean(editingTx)}
         onClose={() => setEditingTx(null)}
-        title="✏️ 編輯交易明細"
+        title="編輯交易明細"
       >
         {editingTx && (
           <TransactionForm

@@ -8,7 +8,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export const Card: React.FC<CardProps> = ({
   children,
-  glass = true,
+  glass: _glass = false,
   interactive = false,
   padding = 'md',
   className = '',
@@ -27,10 +27,8 @@ export const Card: React.FC<CardProps> = ({
   };
 
   const cardStyle: React.CSSProperties = {
-    background: glass ? 'var(--bg-card)' : 'var(--bg-secondary)',
-    backdropFilter: glass ? 'blur(16px)' : undefined,
-    WebkitBackdropFilter: glass ? 'blur(16px)' : undefined,
-    border: '1px solid var(--border-glass)',
+    backgroundColor: 'var(--bg-card)',
+    border: '1px solid var(--border)',
     borderRadius: 'var(--radius-lg)',
     padding: getPadding(),
     boxShadow: 'var(--shadow-sm)',

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useVersionUpdater } from '@/hooks/useVersionUpdater';
 import { useSingleInstanceGuard } from '@/hooks/useSingleInstanceGuard';
-import { Sparkles, RefreshCw, Layers, X, MonitorSmartphone } from 'lucide-react';
+import { RefreshCw, Layers, X, MonitorSmartphone, ArrowUpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
 /**
@@ -30,8 +30,7 @@ export const AppRuntimeGuard: React.FC = () => {
           position: 'fixed',
           inset: 0,
           zIndex: 9999,
-          backgroundColor: 'rgba(11, 15, 25, 0.92)',
-          backdropFilter: 'blur(14px)',
+          backgroundColor: 'var(--bg-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -47,7 +46,7 @@ export const AppRuntimeGuard: React.FC = () => {
             borderRadius: 'var(--radius-xl)',
             padding: '28px 24px',
             textAlign: 'center',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -56,38 +55,37 @@ export const AppRuntimeGuard: React.FC = () => {
         >
           <div
             style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: 'var(--radius-full)',
-              background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+              width: '48px',
+              height: '48px',
+              borderRadius: 'var(--radius-lg)',
+              backgroundColor: 'var(--bg-tertiary)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
-              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.4)'
+              color: 'var(--accent-text)'
             }}
           >
-            <Layers size={28} />
+            <Layers size={22} strokeWidth={1.5} />
           </div>
 
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>
-            「智慧記帳」已在另一個視窗開啟中
+          <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)' }}>
+            智慧記帳已在另一個視窗開啟
           </h2>
 
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            為避免同時開啟多個分頁造成記帳資料不同步，系統已自動暫停此分頁。
-            <br />
-            建議至「系統設定」安裝<strong>電腦版 (.exe)</strong> 或<strong>手機版獨立 App</strong>，即可永遠以單一獨立視窗運行！
+            為避免同時開啟多個分頁造成記帳資料不同步，系統已暫停此分頁。
+            建議至「系統設定」安裝電腦版 (.exe) 或手機版獨立 App，以單一視窗運行。
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '4px' }}>
             <Button
               variant="primary"
               fullWidth
               onClick={takeOverHere}
-              icon={<MonitorSmartphone size={16} />}
+              icon={<MonitorSmartphone size={16} strokeWidth={1.5} />}
             >
-              切換至此視窗繼續使用（接管主視窗）
+              切換至此視窗繼續使用
             </Button>
 
             <Button
@@ -97,7 +95,7 @@ export const AppRuntimeGuard: React.FC = () => {
                 window.close();
               }}
             >
-              關閉此多餘分頁
+              關閉此分頁
             </Button>
           </div>
         </div>
@@ -113,8 +111,7 @@ export const AppRuntimeGuard: React.FC = () => {
           position: 'fixed',
           inset: 0,
           zIndex: 9998,
-          backgroundColor: 'rgba(11, 15, 25, 0.85)',
-          backdropFilter: 'blur(10px)',
+          backgroundColor: 'var(--bg-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -126,20 +123,20 @@ export const AppRuntimeGuard: React.FC = () => {
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-focus)',
             borderRadius: 'var(--radius-lg)',
-            padding: '24px 28px',
+            padding: '20px 24px',
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
-            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.5)'
+            boxShadow: 'var(--shadow-lg)'
           }}
         >
-          <RefreshCw size={24} color="var(--primary)" className="animate-spin" />
+          <RefreshCw size={20} strokeWidth={1.5} color="var(--accent-text)" className="animate-spin" />
           <div>
-            <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)' }}>
-              正在自動更新至最新版本 (v{latestVersion || currentVersion})...
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+              正在更新至 v{latestVersion || currentVersion}
             </div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-              正在同步最新程式碼與清理舊快取，請稍候
+              正在同步最新版本並清理快取，請稍候
             </div>
           </div>
         </div>
@@ -153,64 +150,63 @@ export const AppRuntimeGuard: React.FC = () => {
       <div
         style={{
           position: 'fixed',
-          top: 'calc(var(--safe-top, 52px) + 10px)',
+          top: 'calc(var(--safe-top, 52px) + 12px)',
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 9990,
           width: 'calc(100% - 32px)',
           maxWidth: '520px',
-          background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.96) 0%, rgba(15, 23, 42, 0.98) 100%)',
-          border: '1px solid var(--primary)',
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-focus)',
           borderRadius: 'var(--radius-lg)',
           padding: '12px 16px',
-          boxShadow: '0 12px 32px rgba(0, 0, 0, 0.45), 0 0 20px rgba(99, 102, 241, 0.25)',
+          boxShadow: 'var(--shadow-lg)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '12px',
-          backdropFilter: 'blur(12px)'
+          gap: '12px'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
           <div
             style={{
-              width: '34px',
-              height: '34px',
+              width: '32px',
+              height: '32px',
               borderRadius: 'var(--radius-md)',
-              backgroundColor: 'rgba(99, 102, 241, 0.2)',
-              color: 'var(--primary)',
+              backgroundColor: 'var(--accent-subtle)',
+              color: 'var(--accent-text)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0
             }}
           >
-            <Sparkles size={18} />
+            <ArrowUpCircle size={18} strokeWidth={1.5} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
               發現新版本 v{latestVersion || currentVersion}
             </div>
             <div
               style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 color: 'var(--text-muted)',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis'
               }}
             >
-              點擊「立即更新」即可套用最新功能，不影響您的帳務資料
+              套用更新不影響現有帳務資料
             </div>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           <Button
-            variant="primary"
+            variant="accent"
             size="sm"
             onClick={applyUpdate}
-            icon={<RefreshCw size={14} />}
+            icon={<RefreshCw size={14} strokeWidth={1.5} />}
           >
             立即更新
           </Button>
@@ -227,7 +223,7 @@ export const AppRuntimeGuard: React.FC = () => {
               alignItems: 'center'
             }}
           >
-            <X size={16} />
+            <X size={16} strokeWidth={1.5} />
           </button>
         </div>
       </div>

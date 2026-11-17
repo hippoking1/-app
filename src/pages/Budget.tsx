@@ -9,7 +9,7 @@ import { useAppStore } from '@/stores/appStore';
 import { Budget } from '@/types';
 import { calculateBudgetStatuses, getDailyAllowance, isInvestmentTransaction } from '@/utils/budget';
 import { formatCurrency } from '@/utils/analytics';
-import { Target, Plus, AlertTriangle, CheckCircle2, Calendar } from 'lucide-react';
+import { Plus, AlertTriangle } from 'lucide-react';
 
 export const BudgetPage: React.FC = () => {
   const { currentMonth } = useAppStore();
@@ -22,7 +22,6 @@ export const BudgetPage: React.FC = () => {
 
   const budgetStatuses = calculateBudgetStatuses(budgets, transactions, categories, currentMonth);
 
-  // 總預算與總支出 (自動排除投資相關及股票買賣)
   const totalBudgetAmount = budgets
     .filter((b) => !b.categoryId)
     .reduce((sum, b) => sum + b.amount, 0) ||
@@ -56,62 +55,62 @@ export const BudgetPage: React.FC = () => {
       {/* 頂部標題與新增按鈕 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)' }}>
-            預算管理與超支提醒
+          <h1 style={{ fontSize: '28px', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            預算管理
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            {currentMonth} 監控每月消費額度，防止非必要支出
+          <p className="font-mono" style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            {currentMonth} 每月消費額度監控
           </p>
         </div>
 
-        <Button variant="primary" size="sm" onClick={handleCreate} icon={<Plus size={16} />}>
+        <Button variant="primary" size="sm" onClick={handleCreate} icon={<Plus size={16} strokeWidth={1.5} />}>
           設定新預算
         </Button>
       </div>
 
       {/* 預算總體健康指標 */}
       <div className="grid-3">
-        <Card glass padding="md">
+        <Card padding="md">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-              當月總預算 vs 已支出
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
+              當月總預算與已支出
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--primary-light)', backgroundColor: 'rgba(99, 102, 241, 0.12)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: 600 }}>
-              不含投資理財
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border)', padding: '1px 6px', borderRadius: 'var(--radius-xs)' }}>
+              不含投資
             </span>
           </div>
-          <div className="font-mono" style={{ fontSize: '24px', fontWeight: 900, marginTop: '4px' }}>
-            {formatCurrency(totalSpent)} / <span style={{ color: 'var(--text-muted)', fontSize: '18px' }}>{formatCurrency(totalBudgetAmount)}</span>
+          <div className="font-mono" style={{ fontSize: '24px', fontWeight: 500, marginTop: '8px', color: 'var(--text-primary)' }}>
+            {formatCurrency(totalSpent)} <span style={{ color: 'var(--text-muted)', fontSize: '16px' }}>/ {formatCurrency(totalBudgetAmount)}</span>
           </div>
-          <div style={{ fontSize: '12px', color: totalSpent > totalBudgetAmount ? 'var(--expense)' : 'var(--income)', marginTop: '8px', fontWeight: 600 }}>
-              {totalSpent > totalBudgetAmount
-                ? `⚠️ 已超支 ${formatCurrency(totalSpent - totalBudgetAmount)}`
-                : `剩餘可用 ${formatCurrency(remainingBudget || 0)}`}
+          <div className="font-mono" style={{ fontSize: '12px', color: totalSpent > totalBudgetAmount ? 'var(--expense)' : 'var(--income)', marginTop: '8px', fontWeight: 500 }}>
+            {totalSpent > totalBudgetAmount
+              ? `已超支 ${formatCurrency(totalSpent - totalBudgetAmount)}`
+              : `剩餘可用 ${formatCurrency(remainingBudget || 0)}`}
           </div>
         </Card>
 
-        <Card glass padding="md">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+        <Card padding="md">
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
             每日建議可花費上限
           </span>
-          <div className="font-mono" style={{ fontSize: '24px', fontWeight: 900, marginTop: '4px', color: 'var(--primary-light)' }}>
-            {formatCurrency(dailyAllowance)} <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>/天</span>
+          <div className="font-mono" style={{ fontSize: '24px', fontWeight: 500, marginTop: '8px', color: 'var(--accent-text)' }}>
+            {formatCurrency(dailyAllowance)} <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>/ 天</span>
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+          <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
             本月尚餘 {remainingDays} 天
           </div>
         </Card>
 
-        <Card glass padding="md">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
+        <Card padding="md">
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
             預算警示狀態
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: overCount > 0 ? 'var(--expense)' : 'var(--text-muted)', fontWeight: 700, fontSize: '16px' }}>
-              <AlertTriangle size={18} /> {overCount} 項超支
+          <div className="font-mono" style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: overCount > 0 ? 'var(--expense)' : 'var(--text-muted)', fontWeight: 500, fontSize: '16px' }}>
+              <AlertTriangle size={16} strokeWidth={1.5} /> {overCount} 項超支
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: warningCount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 700, fontSize: '16px' }}>
-              <AlertTriangle size={18} /> {warningCount} 項預警
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: warningCount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: 500, fontSize: '16px' }}>
+              <AlertTriangle size={16} strokeWidth={1.5} /> {warningCount} 項預警
             </div>
           </div>
         </Card>
@@ -119,8 +118,8 @@ export const BudgetPage: React.FC = () => {
 
       {/* 預算項目卡片列表 */}
       <div>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
-          📋 預算清單明細
+        <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>
+          預算清單明細
         </h3>
 
         <div className="grid-2">
@@ -134,8 +133,8 @@ export const BudgetPage: React.FC = () => {
         </div>
 
         {budgetStatuses.length === 0 && (
-          <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            尚未設定任何預算。點擊右上角「設定新預算」開始規劃！
+          <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            尚未設定任何預算，點擊右上角「設定新預算」開始規劃
           </Card>
         )}
       </div>
@@ -144,7 +143,7 @@ export const BudgetPage: React.FC = () => {
       <Modal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}
-        title={editingBudget ? '✏️ 編輯預算' : '🎯 設定每月預算'}
+        title={editingBudget ? '編輯預算' : '設定每月預算'}
       >
         <BudgetForm
           initialData={editingBudget}

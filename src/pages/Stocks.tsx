@@ -7,15 +7,17 @@ import { StockSearchModal } from '@/components/stocks/StockSearchModal';
 import { StockTradeForm } from '@/components/stocks/StockTradeForm';
 import { useStockHoldings } from '@/hooks/useFirestore';
 import { useBatchUpdateHoldings } from '@/hooks/useStockPrice';
+import { useAppStore } from '@/stores/appStore';
 import { StockHolding, StockSearchResult } from '@/types';
 import { calculatePortfolioSummary } from '@/utils/stockCalculations';
 import { formatCurrency } from '@/utils/analytics';
-import { TrendingUp, Plus, RefreshCw, Search, ShieldCheck } from 'lucide-react';
+import { Plus, RefreshCw, Search, ArrowUpDown } from 'lucide-react';
 
 export const Stocks: React.FC = () => {
   const { holdings } = useStockHoldings();
   const safeHoldings = Array.isArray(holdings) ? holdings.filter(Boolean) : [];
   const { updateAllPrices, isUpdating } = useBatchUpdateHoldings(safeHoldings);
+  const { marketColorScheme, toggleMarketColorScheme } = useAppStore();
 
   const [isSearchModalOpen, setSearchModalOpen] = useState(false);
   const [isTradeModalOpen, setTradeModalOpen] = useState(false);
@@ -38,21 +40,30 @@ export const Stocks: React.FC = () => {
       {/* 頂部標題與操作列 */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 900, color: 'var(--text-primary)' }}>
-            股票資產與即時淨值
+          <h1 style={{ fontSize: '28px', fontWeight: 500, letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>
+            股票投資
           </h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-            台股盤後 OpenAPI 與美股 Finnhub 即時報價整合
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '2px' }}>
+            台股盤後 OpenAPI 與美股 Finnhub 報價整合
           </p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleMarketColorScheme}
+            icon={<ArrowUpDown size={14} strokeWidth={1.5} />}
+            title="切換台股紅漲綠跌或國際綠漲紅跌"
+          >
+            {marketColorScheme === 'tw' ? '台股紅漲綠跌' : '國際綠漲紅跌'}
+          </Button>
+          <Button
             variant="secondary"
             size="sm"
             onClick={updateAllPrices}
             loading={isUpdating}
-            icon={<RefreshCw size={16} />}
+            icon={<RefreshCw size={16} strokeWidth={1.5} />}
           >
             更新股價
           </Button>
@@ -63,94 +74,96 @@ export const Stocks: React.FC = () => {
               setSelectedStock(undefined);
               setTradeModalOpen(true);
             }}
-            icon={<Plus size={16} />}
+            icon={<Plus size={16} strokeWidth={1.5} />}
           >
-            🎯 初始自訂建倉 (含興櫃)
+            自訂建倉
           </Button>
           <Button
             variant="primary"
             size="sm"
             onClick={() => setSearchModalOpen(true)}
-            icon={<Search size={16} />}
+            icon={<Search size={16} strokeWidth={1.5} />}
           >
-            搜尋股票行情
+            搜尋股票
           </Button>
         </div>
       </div>
 
       {/* 投資組合總結卡片 */}
       <div className="grid-3">
-        <Card glass padding="lg">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-            持倉總市值 (折合 NT$)
+        <Card padding="lg">
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
+            持倉總市值 (NT$)
           </span>
-          <div className="font-mono" style={{ fontSize: '28px', fontWeight: 900, marginTop: '6px' }}>
+          <div className="font-mono" style={{ fontSize: '28px', fontWeight: 500, marginTop: '8px', color: 'var(--text-primary)', lineHeight: 1.1 }}>
             {formatCurrency(portfolio.totalMarketValueTWD)}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
-            原始持有總成本: {formatCurrency(portfolio.totalCostTWD)}
+          <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px' }}>
+            原始總成本 {formatCurrency(portfolio.totalCostTWD)}
           </div>
         </Card>
 
-        <Card glass padding="lg">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-            未實現總損益 (金額 / 報酬率)
+        <Card padding="lg">
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
+            未實現總損益
           </span>
           <div
             className="font-mono"
             style={{
               fontSize: '28px',
-              fontWeight: 900,
-              marginTop: '6px',
-              color: portfolio.totalProfitLossTWD >= 0 ? 'var(--income)' : 'var(--expense)'
+              fontWeight: 500,
+              marginTop: '8px',
+              lineHeight: 1.1,
+              color: portfolio.totalProfitLossTWD >= 0 ? 'var(--gain)' : 'var(--loss)'
             }}
           >
             {portfolio.totalProfitLossTWD >= 0 ? '+' : ''}
             {formatCurrency(portfolio.totalProfitLossTWD)}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px', fontSize: '12px' }}>
+          <div className="font-mono" style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '12px', fontSize: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>累積總報酬率：</span>
-              <strong style={{ color: portfolio.totalReturnRate >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>累積報酬率</span>
+              <span style={{ fontWeight: 500, color: portfolio.totalReturnRate >= 0 ? 'var(--gain)' : 'var(--loss)' }}>
                 {portfolio.totalReturnRate >= 0 ? '+' : ''}{portfolio.totalReturnRate}%
-              </strong>
+              </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-muted)' }}>🚀 整體年化 / 季化：</span>
-              <span style={{ fontWeight: 700, color: portfolio.totalAnnualizedReturnRate >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>年化 / 季化</span>
+              <span style={{ fontWeight: 500, color: portfolio.totalAnnualizedReturnRate >= 0 ? 'var(--gain)' : 'var(--loss)' }}>
                 {portfolio.totalAnnualizedReturnRate >= 0 ? '+' : ''}{portfolio.totalAnnualizedReturnRate}% / {portfolio.totalQuarterlyReturnRate >= 0 ? '+' : ''}{portfolio.totalQuarterlyReturnRate}%
               </span>
             </div>
           </div>
         </Card>
 
-        <Card glass padding="lg">
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
-            今日預估損益 (TWD)
+        <Card padding="lg">
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 400 }}>
+            今日預估損益 (NT$)
           </span>
           <div
             className="font-mono"
             style={{
               fontSize: '28px',
-              fontWeight: 900,
-              marginTop: '6px',
-              color: portfolio.todayProfitLossTWD >= 0 ? 'var(--income)' : 'var(--expense)'
+              fontWeight: 500,
+              marginTop: '8px',
+              lineHeight: 1.1,
+              color: portfolio.todayProfitLossTWD >= 0 ? 'var(--gain)' : 'var(--loss)'
             }}
           >
             {portfolio.todayProfitLossTWD >= 0 ? '+' : ''}
             {formatCurrency(portfolio.todayProfitLossTWD)}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-            <span>持有檔數: {safeHoldings.length} 檔</span>
-            <span>加權持有: {portfolio.weightedDaysHeld} 天</span>
+          <div className="font-mono" style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>持有 {safeHoldings.length} 檔</span>
+            <span>加權持有 {portfolio.weightedDaysHeld} 天</span>
           </div>
         </Card>
       </div>
 
       {/* 持倉列表 Grid */}
       <div>
-        <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: 'var(--space-3)' }}>
-          📈 持倉股票明細 ({safeHoldings.length})
+        <h3 style={{ fontSize: '15px', fontWeight: 500, marginBottom: 'var(--space-3)', color: 'var(--text-primary)' }}>
+          持倉股票明細 ({safeHoldings.length})
         </h3>
 
         <div className="grid-2">
@@ -160,8 +173,8 @@ export const Stocks: React.FC = () => {
         </div>
 
         {safeHoldings.length === 0 && (
-          <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
-            目前尚無任何股票持倉記錄。點擊右上角「新增持股 / 買入」搜尋並記錄第一筆股票！
+          <Card style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontSize: '13px' }}>
+            尚無股票持倉記錄，點擊「搜尋股票」或「自訂建倉」開始記錄
           </Card>
         )}
       </div>
@@ -177,7 +190,7 @@ export const Stocks: React.FC = () => {
       <Modal
         isOpen={isTradeModalOpen}
         onClose={() => setTradeModalOpen(false)}
-        title="📊 股票交易紀錄 (買進 / 賣出)"
+        title="股票交易與股利紀錄"
       >
         <StockTradeForm
           stock={selectedStock}
