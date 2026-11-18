@@ -33,6 +33,34 @@ export function getUniqueMerchants(transactions: Transaction[] = []): { name: st
 }
 
 /**
+ * 依使用者輸入文字篩選可能的歷史店家（空字串時不回傳任何店家，避免預設展開全部）
+ */
+export function filterMerchants(
+  query: string,
+  uniqueMerchants: { name: string; count: number }[] = [],
+  limit = 8
+): { name: string; count: number }[] {
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const lowerQuery = trimmed.toLowerCase();
+
+  return uniqueMerchants
+    .filter((m) => {
+      const name = m.name.trim();
+      if (name === trimmed) return false;
+      return name.toLowerCase().includes(lowerQuery);
+    })
+    .sort((a, b) => {
+      const aStarts = a.name.trim().toLowerCase().startsWith(lowerQuery) ? 1 : 0;
+      const bStarts = b.name.trim().toLowerCase().startsWith(lowerQuery) ? 1 : 0;
+      if (aStarts !== bStarts) return bStarts - aStarts;
+      return b.count - a.count;
+    })
+    .slice(0, limit);
+}
+
+/**
  * 根據商家/地點名稱，從歷史交易中推算最常使用的消費模式 (分類、帳戶、類型、標籤)
  */
 export function getMerchantPattern(

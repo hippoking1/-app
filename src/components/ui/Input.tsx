@@ -8,7 +8,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, icon, rightElement, className = '', style, ...props }, ref) => {
+  ({ label, error, icon, rightElement, className = '', style, onFocus, onBlur, ...props }, ref) => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%' }}>
         {label && (
@@ -38,7 +38,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               backgroundColor: 'var(--bg-tertiary)',
               border: `1px solid ${error ? 'var(--expense)' : 'var(--border)'}`,
               borderRadius: 'var(--radius-md)',
-              padding: `8px 12px 8px ${icon ? '36px' : '12px'}`,
+              padding: `8px ${rightElement ? '36px' : '12px'} 8px ${icon ? '36px' : '12px'}`,
               minHeight: '36px',
               color: 'var(--text-primary)',
               fontSize: '14px',
@@ -46,8 +46,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               transition: 'border-color 0.15s var(--ease-out)',
               ...style
             }}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--border-focus)')}
-            onBlur={(e) => (e.target.style.borderColor = error ? 'var(--expense)' : 'var(--border)')}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--border-focus)';
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = error ? 'var(--expense)' : 'var(--border)';
+              onBlur?.(e);
+            }}
             className={className}
             {...props}
           />

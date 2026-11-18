@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Transaction, TransactionType, Subscription, SubscriptionPeriod } from '@/types';
 import { useAccounts, useCategories, useTransactions, useTrips } from '@/hooks/useFirestore';
 import { useAppStore } from '@/stores/appStore';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CategoryPicker } from './CategoryPicker';
-import { getUniqueMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
+import { getUniqueMerchants, filterMerchants, getMerchantPattern, MerchantPattern } from '@/utils/merchantPatterns';
 import { calculateCashWalletUsage, calculateCreditCardUsage } from '@/utils/accountCalculations';
 import { calculateNextBillingDate, POPULAR_SUBSCRIPTION_PRESETS, SubscriptionPreset } from '@/utils/subscriptionUtils';
 import {
@@ -21,7 +21,7 @@ import {
 import { CurrencySelector } from '@/components/common/CurrencySelector';
 import { v4 as uuidv4 } from 'uuid';
 import { format, addMonths, parseISO } from 'date-fns';
-import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock, Plane, RefreshCw, Globe, ArrowRight } from 'lucide-react';
+import { MapPin, Sparkles, CreditCard, Layers, Repeat, CalendarClock, Plane, RefreshCw, Globe, ArrowRight, X } from 'lucide-react';
 import { hapticSuccess } from '@/utils/haptics';
 
 interface TransactionFormProps {
@@ -74,6 +74,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [merchant, setMerchant] = useState<string>(() => {
     return initialData?.merchant || sessionStorage.getItem('draft_tx_merchant') || '';
   });
+  const [isMerchantDropdownOpen, setIsMerchantDropdownOpen] = useState(false);
+  const [highlightedMerchantIdx, setHighlightedMerchantIdx] = useState(-1);
+  const merchantContainerRef = useRef<HTMLDivElement>(null);
   const [appliedPattern, setAppliedPattern] = useState<MerchantPattern | null>(null);
   const [accountId, setAccountId] = useState<string>(initialData?.accountId || accounts[0]?.id || '');
   const [transferToAccountId, setTransferToAccountId] = useState<string>(initialData?.transferToAccountId || '');
@@ -215,8 +218,25 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     }
   }, [date, activePeriods]);
 
-  // 取得歷史常去商家清單
+  // 取得歷史常去商家清單與輸入篩選結果
   const uniqueMerchants = useMemo(() => getUniqueMerchants(transactions), [transactions]);
+  const filteredMerchants = useMemo(
+    () => filterMerchants(merchant, uniqueMerchants, 8),
+    [merchant, uniqueMerchants]
+  );
+
+  // 點擊商家快選區域外部時自動收合篩選清單
+  useEffect(() => {
+    if (!isMerchantDropdownOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (merchantContainerRef.current && !merchantContainerRef.current.contains(e.target as Node)) {
+        setIsMerchantDropdownOpen(false);
+        setHighlightedMerchantIdx(-1);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [isMerchantDropdownOpen]);
 
   // 地點或商家輸入連動：自動推算並套用最常使用的消費模式
   const handleMerchantChange = (val: string) => {
@@ -245,6 +265,29 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     } else {
       setAppliedPattern(null);
     }
+  };
+
+  const handleSelectMerchant = (name: string) => {
+    handleMerchantChange(name);
+    setIsMerchantDropdownOpen(false);
+    setHighlightedMerchantIdx(-1);
+  };
+
+  const renderHighlightedMerchant = (name: string, query: string) => {
+    const q = query.trim();
+    if (!q) return name;
+    const idx = name.toLowerCase().indexOf(q.toLowerCase());
+    if (idx < 0) return name;
+    const before = name.slice(0, idx);
+    const matched = name.slice(idx, idx + q.length);
+    const after = name.slice(idx + q.length);
+    return (
+      <>
+        {before}
+        <span style={{ color: 'var(--accent-text)', fontWeight: 600 }}>{matched}</span>
+        {after}
+      </>
+    );
   };
 
   // 自動同步草稿至 sessionStorage
@@ -819,21 +862,137 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         )}
       </div>
 
-      {/* 地點或商家 (輸入時自動套用最常使用之消費模式) */}
-      <div>
+      {/* 地點或商家 (輸入時依關鍵字篩選快選，並自動套用最常使用之消費模式) */}
+      <div ref={merchantContainerRef}>
         <Input
           label="地點或商家"
           placeholder="例如：麥當勞、7-ELEVEN、全聯、星巴克"
           value={merchant}
-          onChange={(e) => handleMerchantChange(e.target.value)}
-          list="merchant-suggestions"
+          autoComplete="off"
+          onFocus={(e) => {
+            if (merchant.trim().length > 0) {
+              setIsMerchantDropdownOpen(true);
+            }
+            const target = e.currentTarget;
+            window.setTimeout(() => {
+              target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 120);
+          }}
+          onChange={(e) => {
+            const nextVal = e.target.value;
+            handleMerchantChange(nextVal);
+            setIsMerchantDropdownOpen(nextVal.trim().length > 0);
+            setHighlightedMerchantIdx(-1);
+          }}
+          onKeyDown={(e) => {
+            if (!isMerchantDropdownOpen || filteredMerchants.length === 0) return;
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              setHighlightedMerchantIdx((prev) => (prev + 1) % filteredMerchants.length);
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              setHighlightedMerchantIdx((prev) =>
+                prev <= 0 ? filteredMerchants.length - 1 : prev - 1
+              );
+            } else if (e.key === 'Enter' && highlightedMerchantIdx >= 0) {
+              e.preventDefault();
+              handleSelectMerchant(filteredMerchants[highlightedMerchantIdx].name);
+            } else if (e.key === 'Escape') {
+              e.preventDefault();
+              setIsMerchantDropdownOpen(false);
+              setHighlightedMerchantIdx(-1);
+            }
+          }}
           icon={<MapPin size={16} />}
+          rightElement={
+            merchant ? (
+              <button
+                type="button"
+                aria-label="清除地點或商家"
+                onClick={() => {
+                  handleMerchantChange('');
+                  setIsMerchantDropdownOpen(false);
+                  setHighlightedMerchantIdx(-1);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 'var(--radius-sm)'
+                }}
+              >
+                <X size={14} />
+              </button>
+            ) : undefined
+          }
         />
-        <datalist id="merchant-suggestions">
-          {uniqueMerchants.map((m) => (
-            <option key={m.name} value={m.name} />
-          ))}
-        </datalist>
+
+        {/* 輸入文字後於表單內展開篩選快選清單（不覆蓋手機鍵盤，亦不預設列出全部店家） */}
+        {isMerchantDropdownOpen && merchant.trim().length > 0 && filteredMerchants.length > 0 && (
+          <div
+            role="listbox"
+            aria-label="符合的店家建議"
+            style={{
+              marginTop: '6px',
+              backgroundColor: 'var(--bg-tertiary)',
+              border: '1px solid var(--border-focus)',
+              borderRadius: 'var(--radius-md)',
+              maxHeight: '168px',
+              overflowY: 'auto',
+              boxShadow: 'var(--shadow-md)'
+            }}
+          >
+            {filteredMerchants.map((m, idx) => {
+              const isHighlighted = idx === highlightedMerchantIdx;
+              return (
+                <button
+                  key={m.name}
+                  type="button"
+                  role="option"
+                  aria-selected={isHighlighted}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelectMerchant(m.name)}
+                  onMouseEnter={() => setHighlightedMerchantIdx(idx)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '8px',
+                    padding: '9px 12px',
+                    minHeight: '38px',
+                    backgroundColor: isHighlighted ? 'var(--accent-subtle)' : 'transparent',
+                    border: 'none',
+                    borderBottom: idx < filteredMerchants.length - 1 ? '1px solid var(--border)' : 'none',
+                    color: 'var(--text-primary)',
+                    fontSize: '13px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.12s var(--ease-out)'
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <MapPin size={14} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {renderHighlightedMerchant(m.name, merchant)}
+                    </span>
+                  </span>
+                  <span
+                    className="font-mono"
+                    style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}
+                  >
+                    {m.count} 筆
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {/* 自動套用模式提示 */}
         {appliedPattern && (
@@ -873,7 +1032,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <button
                 key={m.name}
                 type="button"
-                onClick={() => handleMerchantChange(m.name)}
+                onClick={() => handleSelectMerchant(m.name)}
                 style={{
                   padding: '2px 8px',
                   borderRadius: 'var(--radius-full)',

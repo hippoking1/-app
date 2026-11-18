@@ -72,7 +72,7 @@ export const Modal: React.FC<ModalProps> = ({
         style={{
           width: '100%',
           maxWidth: maxWidth,
-          maxHeight: '90vh',
+          maxHeight: '90dvh',
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-focus)',
           borderRadius: 'var(--radius-xl)',
